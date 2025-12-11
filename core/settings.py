@@ -105,7 +105,7 @@ USE_TZ = True
 # IMPORTANTE: con la barra inicial para que genere URLs absolutas (/static/...)
 STATIC_URL = '/static/'
 # En producción, configurá STATIC_ROOT y usá collectstatic
-# STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = '/home/infinito_produccion/staticfiles'
 # (opcional en dev)
 # STATICFILES_DIRS = [BASE_DIR / 'static']
 
