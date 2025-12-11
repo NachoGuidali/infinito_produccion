@@ -1,0 +1,46 @@
+{% comment %}
+Botón flotante del carrito con contador de ítems en sesión.
+Requiere que existan las rutas:
+- lms:cart_view
+- lms:cart_go_checkout
+{% endcomment %}
+
+{% with cart=request.session.cart %}
+{% with count=cart|length %}
+<a href="{% url 'lms:cart_view' %}" aria-label="Carrito"
+   style="
+     position:fixed; right:18px; bottom:86px; z-index:9999;
+     width:56px; height:56px; border-radius:50%;
+     background:#0b2a3a; box-shadow:0 6px 18px rgba(0,0,0,.18);
+     display:flex; align-items:center; justify-content:center; color:#fff;">
+  <!-- Icono carrito -->
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
+    <path d="M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.79-1.11l3.58-7.16A1 1 0 0 0 23 4h-16zM7 22a2 2 0 1 0 .001-3.999A2 2 0 0 0 7 22zm10 0a2 2 0 1 0 .001-3.999A2 2 0 0 0 17 22z"></path>
+  </svg>
+
+  <!-- Burbuja contador -->
+  <span id="cart-badge"
+        style="
+          position:absolute; top:-6px; right:-6px; min-width:22px; height:22px;
+          background:#ff4ec6; color:#fff; font-weight:800; font-size:12px;
+          border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 6px;">
+    {{ count|default:0 }}
+  </span>
+</a>
+{% endwith %}
+{% endwith %}
+
+<script>
+(function(){
+  // Listener opcional: si alguna vista dispara 'cart:added', incrementa badge.
+  window.addEventListener('cart:added', function(ev){
+    try{
+      var add = (ev.detail && ev.detail.count) ? parseInt(ev.detail.count,10) : 1;
+      var b = document.getElementById('cart-badge');
+      if(!b) return;
+      var curr = parseInt(b.textContent || '0', 10) || 0;
+      b.textContent = (curr + add);
+    }catch(_){}
+  }, false);
+})();
+</script>

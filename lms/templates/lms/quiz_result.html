@@ -1,0 +1,30 @@
+{% extends "lms/base.html" %}
+{% block title %}Resultado del quiz — {{ course.title }}{% endblock %}
+{% block content %}
+
+<div class="card" style="max-width:760px;margin:0 auto;text-align:center">
+  <h1 style="margin-top:0">Resultado del quiz</h1>
+  <p class="muted" style="margin:.25rem 0 1rem">{{ course.title }} — {{ stage.title }}</p>
+
+  {% if passed %}
+    <div class="card" style="background:#e9f7ef;border-color:#cdebd9;color:#14532d">
+      <strong>¡Aprobaste! 🎉</strong>
+      <div style="margin-top:6px">Obtuviste <strong>{{ score }}%</strong> (mínimo {{ passing_score }}%).</div>
+    </div>
+  {% else %}
+    <div class="card" style="background:#fff2f2;border-color:#ffd4d4;color:#7f1d1d">
+      <strong>No alcanzaste el puntaje mínimo.</strong>
+      <div style="margin-top:6px">Obtuviste <strong>{{ score }}%</strong> (mínimo {{ passing_score }}%).</div>
+    </div>
+  {% endif %}
+
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+    <a class="btn" href="{{ stage_url }}">Volver a la etapa</a>
+    {% if not passed %}
+      <a class="btn btn-outline" href="{{ retake_url }}">Volver a rendir</a>
+    {% endif %}
+    <a class="btn btn-outline" href="{{ profile_url }}">Ir a mi perfil</a>
+  </div>
+</div>
+
+{% endblock %}

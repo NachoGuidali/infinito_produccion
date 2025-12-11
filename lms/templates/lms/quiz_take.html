@@ -1,0 +1,59 @@
+{% extends 'lms/base.html' %}
+{% block title %}Quiz — {{ stage.title }}{% endblock %}
+{% block content %}
+
+<h1>Quiz — {{ stage.title }}</h1>
+
+{# Mensajes Django (por si el view usa messages) #}
+{% if messages %}
+  <div class="card" style="margin-bottom:12px;background:#111827;color:#fff;border-color:#0f172a">
+    <ul style="margin:0;padding-left:18px">
+      {% for message in messages %}
+        <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{# RESULTADO (si el view envía 'score' y 'passed') #}
+{% if score|default:'' != '' %}
+  <div class="card" style="border-color: var(--line);">
+    {% if passed %}
+      <div style="font-weight:800;font-size:20px;color:#086c3d;display:flex;align-items:center;gap:8px;">
+        ✅ ¡Aprobado!
+      </div>
+      <p class="muted" style="margin:8px 0 0">Tu puntaje: <strong>{{ score }}%</strong>. Puntaje mínimo: <strong>{{ quiz.passing_score }}%</strong>.</p>
+    {% else %}
+      <div style="font-weight:800;font-size:20px;color:#b91c1c;display:flex;align-items:center;gap:8px;">
+        ⚠️ No aprobado
+      </div>
+      <p class="muted" style="margin:8px 0 0">Tu puntaje: <strong>{{ score }}%</strong>. Necesitás <strong>{{ quiz.passing_score }}%</strong> para aprobar. Podés volver a intentarlo.</p>
+    {% endif %}
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <a class="btn" href="{% url 'lms:stage_detail' stage.course.slug stage.slug %}">Volver a la etapa</a>
+      {% if not passed %}
+        <a class="btn btn-outline" href="{% url 'lms:quiz_take' stage.course.slug stage.slug %}">Volver a rendir</a>
+      {% endif %}
+    </div>
+  </div>
+
+{% else %}
+
+  {# FORMULARIO DEL QUIZ #}
+  <form method="post" class="card" style="border-color:var(--line)">{% csrf_token %}
+    <div class="muted" style="margin-bottom:12px">
+      Debés alcanzar <strong>{{ quiz.passing_score }}%</strong> para aprobar.
+    </div>
+
+    {{ form.as_p }}
+
+    <div style="margin-top:12px">
+      <button class="btn" type="submit">Enviar</button>
+      <a class="btn btn-outline" href="{% url 'lms:stage_detail' stage.course.slug stage.slug %}" style="margin-left:8px">Cancelar</a>
+    </div>
+  </form>
+
+{% endif %}
+
+{% endblock %}

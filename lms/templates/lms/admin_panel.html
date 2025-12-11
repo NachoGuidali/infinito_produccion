@@ -1,0 +1,192 @@
+{% extends "lms/base.html" %}
+{% block title %}Panel — Infinito Capacitaciones{% endblock %}
+{% block content %}
+
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+  .kpi h3{margin:4px 0 0;font-size:28px}
+  .tabs{display:flex;gap:8px;margin:14px 0}
+  .tab{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .tab.active{background:var(--color-principal);color:#fff;border-color:transparent}
+  .card-row{display:flex;gap:12px;align-items:flex-start}
+  .col{flex:1}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th{font-weight:700;text-align:left}
+  td,th{padding:10px 12px;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  tr td:first-child, tr th:first-child{border-left:1px solid var(--line);border-top-left-radius:12px;border-bottom-left-radius:12px}
+  tr td:last-child, tr th:last-child{border-right:1px solid var(--line);border-top-right-radius:12px;border-bottom-right-radius:12px}
+  .badge{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;display:inline-block}
+  .b-paid{background:#e7f9ed;color:#187a3d}
+  .b-pending{background:#fff2d8;color:#7a4a18}
+  .b-info{background:#eef6ff;color:#0b3b91}
+  .btn-xs{padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#fff}
+  .btn-danger{background:#ffeff1;color:#b30b2a;border-color:#ffd6dc}
+  .note{background:#fff7ff;border:1px dashed #f2b7e8;border-radius:12px;padding:8px 10px;margin-top:6px}
+</style>
+
+<h1 style="margin:0 0 8px">Panel administrativo</h1>
+
+{# KPIs desde summary.* que trae la vista #}
+<div class="kpis">
+  <div class="kpi">
+    <div class="muted">Usuarios con actividad</div>
+    <h3>{{ summary.users }}</h3>
+  </div>
+  <div class="kpi">
+    <div class="muted">Cursos</div>
+    <h3>{{ summary.courses }}</h3>
+  </div>
+  <div class="kpi">
+    <div class="muted">Etapas</div>
+    <h3>{{ summary.stages }}</h3>
+  </div>
+  <div class="kpi">
+    <div class="muted">Lecciones</div>
+    <h3>{{ summary.lessons }}</h3>
+  </div>
+</div>
+
+<div class="tabs">
+  <a class="tab active" href="#pedidos" onclick="sel(event,'pedidos')">Pedidos</a>
+  <a class="tab" href="#usuarios" onclick="sel(event,'usuarios')">Por usuario</a>
+  <a class="tab" href="#avances" onclick="sel(event,'avances')">Avances por etapa</a>
+</div>
+
+<div id="pedidos" class="section">
+  <h2 style="margin:6px 0 10px">Pedidos (últimos 300)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Fecha</th>
+        <th>Usuario</th>
+        <th>Estado</th>
+        <th>Total</th>
+        <th>Items</th>
+        <th>Pago</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in purchases %}
+      <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.created_at|date:"d/m/Y H:i" }}</td>
+        <td><a href="{% url 'lms:admin_user_detail' p.user.id %}">{{ p.user.username }}</a></td>
+        <td>
+          {% if p.status == 'paid' %}
+            <span class="badge b-paid">Pagado</span>
+          {% else %}
+            <span class="badge b-pending">Pendiente</span>
+          {% endif %}
+        </td>
+        <td>${{ p.total_ars|floatformat:0 }}</td>
+
+        <td>
+          <ul style="margin:0;padding-left:18px">
+            {% for it in p.items.all %}
+              <li>
+                {% if it.stage %}
+                  Curso: <strong>{{ it.stage.course.title }}</strong> — Etapa: {{ it.stage.title }}
+                {% elif it.bundle %}
+                  <strong>Curso completo</strong>: {{ it.bundle.course.title }}
+                {% else %}
+                  Ítem
+                {% endif %}
+                — ${{ it.price_ars|floatformat:0 }}
+              </li>
+            {% endfor %}
+          </ul>
+        </td>
+
+        <td>
+          {# 👇 usamos los campos hidratados en la vista #}
+          {% if p.payment_method == "transfer" and p.transfer_receipt %}
+            <span class="badge b-info">Transferencia</span>
+            <div class="note">
+              Comprobante:
+              <a href="{{ p.transfer_receipt.url }}" target="_blank">ver archivo</a>
+            </div>
+          {% elif p.external_ref %}
+            <span class="badge b-info">MP / Ref: {{ p.external_ref }}</span>
+          {% else %}
+            <span class="muted">–</span>
+          {% endif %}
+        </td>
+
+        <td style="white-space:nowrap">
+          <form method="post" action="{% url 'lms:admin_order_status' p.id %}" style="display:inline">{% csrf_token %}
+            <input type="hidden" name="status" value="paid">
+            <button class="btn-xs" {% if p.status == 'paid' %}disabled{% endif %}>Marcar pagado</button>
+          </form>
+
+          <form method="post" action="{% url 'lms:admin_order_status' p.id %}" style="display:inline">{% csrf_token %}
+            <input type="hidden" name="status" value="pending">
+            <button class="btn-xs">Marcar pendiente</button>
+          </form>
+
+          <form method="post" action="{% url 'lms:admin_order_delete' p.id %}" style="display:inline" onsubmit="return confirm('¿Eliminar pedido #{{p.id}}?');">{% csrf_token %}
+            <button class="btn-xs btn-danger">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="muted">No hay pedidos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="usuarios" class="section" style="display:none">
+  <h2 style="margin:6px 0 10px">Usuarios con compras</h2>
+  <div class="card-row">
+    <div class="col card">
+      <ul style="margin:0;padding-left:18px">
+        {% for p in purchases %}
+          <li>
+            <a href="{% url 'lms:admin_user_detail' p.user.id %}">{{ p.user.username }}</a>
+            — última compra: {{ p.created_at|date:"d/m/Y H:i" }}
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="avances" class="section" style="display:none">
+  <h2 style="margin:6px 0 10px">Avances por etapa (últimos registros)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th><th>Usuario</th><th>Curso</th><th>Etapa</th><th>Estado</th><th>Puntaje</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in progresses %}
+      <tr>
+        <td>{{ s.updated_at|default:s.passed_at|date:"d/m/Y H:i" }}</td>
+        <td><a href="{% url 'lms:admin_user_detail' s.user.id %}">{{ s.user.username }}</a></td>
+        <td>{{ s.stage.course.title }}</td>
+        <td>{{ s.stage.title }}</td>
+        <td>{% if s.passed %}<span class="badge b-paid">Aprobada</span>{% else %}<span class="badge b-pending">En progreso</span>{% endif %}</td>
+        <td>{{ s.score|default:"-" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="muted">Sin registros.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function sel(e,id){
+  e.preventDefault();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  e.target.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById(id).style.display='block';
+}
+</script>
+
+{% endblock %}

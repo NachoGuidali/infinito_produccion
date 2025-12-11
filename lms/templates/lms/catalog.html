@@ -1,0 +1,68 @@
+{% extends 'lms/base.html' %}
+{% block title %}Cursos y capacitaciones — Infinito Capacitaciones{% endblock %}
+{% block content %}
+
+{# ---------- Tabs ---------- #}
+<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px">
+  <a href="{% url 'lms:catalog_courses' %}"
+     class="{% if current_type == 'course' %}btn{% else %}btn-outline{% endif %}">
+     Cursos
+  </a>
+  <a href="{% url 'lms:catalog_trainings' %}"
+     class="{% if current_type == 'training' %}btn{% else %}btn-outline{% endif %}">
+     Capacitaciones
+  </a>
+  <a href="{% url 'lms:catalog' %}"
+     class="{% if not current_type %}btn{% else %}btn-outline{% endif %}">
+     Todo
+  </a>
+</div>
+
+{# ---------- Título dinámico ---------- #}
+{% if current_type == 'course' %}
+  <h1>Cursos</h1>
+{% elif current_type == 'training' %}
+  <h1>Capacitaciones</h1>
+{% else %}
+  <h1>Cursos y capacitaciones</h1>
+{% endif %}
+
+{% if courses %}
+  <div class="grid grid-3">
+    {% for c in courses %}
+      <article class="card">
+        <img src="{{ c.image_url|default:'https://via.placeholder.com/640x360?text=Curso' }}"
+             alt="{{ c.title }}"
+             style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:10px; border:1px solid #e9e9e9">
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px">
+          <h3 style="margin:0">{{ c.title }}</h3>
+          {# CHIP tipo (Curso / Capacitación) #}
+          <span style="
+              white-space:nowrap; font-size:12px; font-weight:700;
+              padding:6px 10px; border-radius:999px;
+              background:#f7e7fb; color:#8a2b8f; border:1px solid #ecd9f0;">
+            {{ c.get_kind_display }}
+          </span>
+        </div>
+
+        <p class="muted" style="min-height:3em; margin-top:6px">
+          {{ c.description|default:''|truncatechars:120 }}
+        </p>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px">
+          <a class="btn" href="{% url 'lms:course_detail' c.slug %}">
+            Ver detalle
+          </a>
+          {% if c.price_ars %}
+            <span class="muted" style="font-weight:700">ARS {{ c.price_ars }}</span>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">No hay elementos para esta vista.</p>
+{% endif %}
+
+{% endblock %}

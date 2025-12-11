@@ -1,0 +1,273 @@
+{% extends 'lms/base.html' %}
+{% block title %}{{ course.title }} — Infinito Capacitaciones{% endblock %}
+{% block content %}
+
+<h1>{{ course.title }}</h1>
+
+<div class="card" style="display:flex; gap:16px; align-items:flex-start; background:#ffe6f2; border-color:#ffd9ec">
+  <img src="{{ course.image_url|default:'https://via.placeholder.com/640x360?text=Curso' }}"
+       alt="{{ course.title }}"
+       style="width:360px; max-width:45%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; border:1px solid #e9e9e9">
+  <div style="flex:1">
+    <details class="card" style="padding:12px; background:#ffffff; border-color:var(--line)">
+      <summary>Descripción</summary>
+      <div class="muted" style="margin-top:8px">{{ course.description|linebreaks }}</div>
+    </details>
+
+    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      {% if course_owned %}
+        <span class="card" style="padding:6px 10px; background:#e9f7ef; border-color:#cdebd9; color:#1b6b3a; font-weight:700">✅ Comprado</span>
+
+        {% if course.kind == 'course' and first_stage %}
+          <a class="btn" href="{% url 'lms:stage_detail' course.slug first_stage.slug %}">Continuar</a>
+        {% else %}
+          <a class="btn" href="#contenido">Ver contenido</a>
+        {% endif %}
+
+        {% if course_completed %}
+          <span class="card" style="padding:6px 10px; background:#def7e5; border-color:#bfe9cc; color:#166534; font-weight:700">🏁 Aprobado</span>
+        {% endif %}
+
+      {% else %}
+        {% if bundles %}
+          {% with b=bundles.0 %}
+            <span class="card" style="padding:6px 10px; background:#fff; border-color:#eee; font-weight:700">
+              <del style="opacity:.6">$ {{ stages_total_ars }}</del>
+              <span style="color:#15803d; margin-left:8px">$ {{ b.price_ars }}</span>
+            </span>
+
+            <form method="post" action="{% url 'lms:cart_add' %}" style="display:inline">{% csrf_token %}
+              <input type="hidden" name="type" value="bundle">
+              <input type="hidden" name="id" value="{{ b.id }}">
+              <input type="hidden" name="next" value="{% url 'lms:cart_view' %}">
+              <button class="btn" type="submit">
+                {% if course.kind == 'training' %}
+                  Comprar capacitación
+                {% else %}
+                  Comprar curso
+                {% endif %}
+              </button>
+            </form>
+          {% endwith %}
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="cart-toast" style="position:fixed; right:16px; bottom:16px; z-index:1000; display:none;">
+  <div class="card" style="background:#111827; color:#fff; border-color:#111827; box-shadow:0 10px 30px rgba(0,0,0,.25)">
+    Agregado al carrito.
+    <a href="{% url 'lms:cart_view' %}" class="btn" style="margin-left:8px; background:#fff; color:#111; border-color:#eee">Ver carrito</a>
+  </div>
+</div>
+
+{% if course.kind == 'training' %}
+  <a id="contenido"></a>
+
+  {# AVISO SOLO PARA CAPACITACIONES SI AÚN NO COMPRÓ #}
+  {% if not course_owned and not stage_entitled_ids %}
+    <div style="
+        background:#fff7ff;border:1px solid #f6c2ea;color:#5a2452;
+        padding:14px;border-radius:14px;margin:16px 0;box-shadow:0 6px 20px rgba(0,0,0,.04)">
+      <div style="font-weight:800;display:flex;gap:10px;align-items:center;margin-bottom:6px">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f06ad2"></span>
+        El material se habilita después de la compra
+      </div>
+      <p style="margin:0;color:#3b2b3a">
+        Para acceder a los PDFs, videos y cuestionarios de esta capacitación,
+        completá la compra. Una vez aprobado el pago, tu acceso se activa automáticamente y lo verás en
+        <strong>Mi perfil</strong>.
+      </p>
+      {% if bundles %}
+        {% with b=bundles.0 %}
+          <div style="margin-top:10px">
+            <form method="post" action="{% url 'lms:cart_add' %}" style="display:inline">{% csrf_token %}
+              <input type="hidden" name="type" value="bundle">
+              <input type="hidden" name="id" value="{{ b.id }}">
+              <input type="hidden" name="next" value="{% url 'lms:cart_view' %}">
+              <button class="btn" type="submit">Comprar capacitación</button>
+            </form>
+          </div>
+        {% endwith %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% with tp=training_payload %}
+    {% if tp %}
+      <h2 style="margin-top:24px">Material</h2>
+      {% if tp.pdf_items %}
+        {% for it in tp.pdf_items %}
+          <div class="card" style="margin-bottom:14px">
+            <h4 style="margin:0 0 10px">{{ it.title }}</h4>
+            <iframe src="{{ it.url|safe }}" style="width:100%;height:560px;border:none;border-radius:12px"></iframe>
+            <p style="margin-top:10px">
+              <a class="btn secondary" href="{{ it.url }}" target="_blank">Descargar PDF</a>
+            </p>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No hay PDFs disponibles.</p>
+      {% endif %}
+
+      <h2 style="margin-top:24px">Videos</h2>
+      {% if tp.video_lessons %}
+        {% for le in tp.video_lessons %}
+          <div class="card" style="margin-bottom:14px">
+            <h4 style="margin:0 0 10px">{{ le.title }}</h4>
+            {% if le.youtube_url %}
+              <div class="ytbox"
+                   id="yt-{{ forloop.counter0 }}"
+                   data-url="{{ le.youtube_url|escape }}"
+                   style="position:relative;width:100%;max-width:960px;aspect-ratio:16/9;background:#000;overflow:hidden;border-radius:12px">
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No hay videos disponibles.</p>
+      {% endif %}
+
+      <h2 style="margin-top:24px">Cuestionario</h2>
+      {% if tp.quiz_targets %}
+        {% for q in tp.quiz_targets %}
+          <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px">
+            <div><strong>{{ q.title }}</strong></div>
+            <a class="btn" href="{{ q.url }}">Rendir quiz</a>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">Este contenido no tiene cuestionario disponible.</p>
+      {% endif %}
+
+    {% else %}
+      {# Sin acceso aún: dejamos que el aviso de arriba haga el trabajo #}
+    {% endif %}
+  {% endwith %}
+{% else %}
+
+  <h2 style="margin-top:24px">Etapas</h2>
+  <ol style="padding-left:16px">
+    {% for st in course.stages.all %}
+      <li class="card" style="list-style-position:inside; margin-bottom:14px; background:#ffe6f2; border-color:#ffd9ec">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px">
+          <div style="flex:1">
+            <strong>{{ st.title }}</strong>
+
+            <details class="card" style="margin-top:10px; padding:10px; background:#ffffff; border-color:var(--line)">
+              <summary style="color: var(--color-boton); font-weight:700">Contenido de la etapa</summary>
+              {% with lessons=st.lessons.all %}
+                {% if lessons %}
+                  <ul class="muted" style="margin:10px 0 0 20px; padding:0">
+                    {% for le in lessons %}<li>{{ le.title }}</li>{% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="muted" style="margin:10px 0 0">Sin clases cargadas.</p>
+                {% endif %}
+              {% endwith %}
+            </details>
+          </div>
+
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px">
+            {% if request.user.is_authenticated %}
+              {% if not st.id in stage_entitled_ids %}
+                {% if st.price_ars %}
+                  <span class="muted" style="font-weight:700">$ {{ st.price_ars }}</span>
+                {% endif %}
+              {% endif %}
+            {% else %}
+              {% if st.price_ars %}
+                <span class="muted" style="font-weight:700">$ {{ st.price_ars }}</span>
+              {% endif %}
+            {% endif %}
+
+            {% if request.user.is_authenticated and stage_entitled_ids and st.id in stage_entitled_ids %}
+              <a class="btn" href="{% url 'lms:stage_detail' course.slug st.slug %}">Ver etapa</a>
+              {% if st.id in passed_by_id %}
+                <small class="card" style="padding:4px 8px;background:#def7e5;border-color:#bfe9cc;color:#166534;font-weight:700">Aprobado</small>
+              {% else %}
+                <small class="muted">Ya tenés acceso</small>
+              {% endif %}
+            {% else %}
+              <form method="post" action="{% url 'lms:cart_add' %}" class="js-stage-buy" style="display:inline">{% csrf_token %}
+                <input type="hidden" name="type" value="stage">
+                <input type="hidden" name="id" value="{{ st.id }}">
+                <button class="btn" type="submit" data-type="stage" data-id="{{ st.id }}">Comprar etapa</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% if bundles %}
+    {% with b=bundles.0 %}
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; background:#fff; border-color:var(--line)">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <strong>Curso completo</strong> — Incluye {{ course.stages.all|length }} etapas
+          <span class="muted" style="font-weight:700">
+            <del style="opacity:.6">$ {{ stages_total_ars }}</del>
+            <span style="color:#15803d; margin-left:6px">$ {{ b.price_ars }}</span>
+          </span>
+        </div>
+        <div>
+          {% if course_owned and first_stage %}
+            <a class="btn secondary" href="{% url 'lms:stage_detail' course.slug first_stage.slug %}">Continuar</a>
+            {% if course_completed %}
+              <small class="card" style="padding:4px 8px;background:#def7e5;border-color:#bfe9cc;color:#166534;font-weight:700">Aprobado</small>
+            {% endif %}
+          {% elif not course_owned %}
+            <form method="post" action="{% url 'lms:cart_add' %}" style="display:inline">{% csrf_token %}
+              <input type="hidden" name="type" value="bundle">
+              <input type="hidden" name="id" value="{{ b.id }}">
+              <input type="hidden" name="next" value="{% url 'lms:cart_view' %}">
+              <button class="btn" type="submit">Comprar curso</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endwith %}
+  {% endif %}
+
+{% endif %}
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+(function(){
+  function ytId(u){
+    try{
+      const url = new URL(u); const h = url.hostname;
+      if (h.endsWith('youtu.be')) return url.pathname.replace('/','');
+      if (h.includes('youtube.com')){
+        if (url.pathname.startsWith('/watch'))  return (url.searchParams.get('v')||'');
+        if (url.pathname.startsWith('/shorts/'))return url.pathname.split('/shorts/')[1];
+        if (url.pathname.startsWith('/embed/')) return url.pathname.split('/embed/')[1];
+      }
+    }catch(e){} return '';
+  }
+  function fallback(box, id, watchUrl){
+    var thumb = id ? 'https://img.youtube.com/vi/'+id+'/hqdefault.jpg' : '';
+    box.innerHTML =
+      '<a href="'+(watchUrl||("https://www.youtube.com/watch?v="+id))+'" target="_blank" rel="noopener" '+
+      'style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;'+
+      'font:600 18px/1.2 system-ui;text-decoration:none;background:rgba(0,0,0,.2)">▶ Ver video en YouTube</a>'+
+      (thumb ? '<img alt="" src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;opacity:.7">' : '');
+  }
+  window.onYouTubeIframeAPIReady = function(){
+    document.querySelectorAll('.ytbox').forEach(function(box){
+      var url = box.getAttribute('data-url') || '';
+      var id  = ytId(url);
+      if (!id){ fallback(box, '', url); return; }
+      new YT.Player(box, {
+        videoId: id,
+        playerVars: { rel: 0, modestbranding: 1, origin: location.origin },
+        events: { onError: function(e){ if (e && (e.data===101||e.data===150||e.data===5)) { fallback(box, id, url); } } }
+      });
+    });
+  };
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "lms/base.html" %}
+{% block title %}Inicio — Infinito Capacitaciones{% endblock %}
+{% block content %}
+
+<style>
+  /* ---------- HERO ---------- */
+  .hero{
+    display:grid; gap:22px; align-items:center;
+    grid-template-columns: 1.2fr .9fr;
+    margin: 0 0 24px;
+  }
+  @media (max-width:900px){ .hero{grid-template-columns:1fr} }
+
+  .hero h1{margin:0 0 6px; font-size:clamp(28px,4.2vw,42px); line-height:1.1}
+  .hero .sub{color:#ff4ec6; font-weight:800; font-size:clamp(24px,3vw,34px); margin:0 0 8px}
+  .hero p.lead{margin:8px 0 14px; color:#ff4ec6; font-weight:600}
+  .hero ul{margin:0 0 14px 18px}
+  .hero li{margin:6px 0}
+  .hero-note{margin-top:12px; font-weight:700}
+
+  .hero-img{
+    border-radius:22px; overflow:hidden; border:1px solid var(--line);
+    box-shadow:0 10px 24px rgba(0,0,0,.06);
+  }
+  .hero-img img{width:100%; height:auto; display:block}
+
+  /* ---------- CARRUSELES ---------- */
+  .carousel {display:flex; gap:14px; padding:6px; overflow-x:auto; scroll-snap-type:x mandatory}
+  .carousel::-webkit-scrollbar{height:8px}
+  .carousel::-webkit-scrollbar-thumb{background:#dedede; border-radius:8px}
+  .course-card{scroll-snap-align:start; min-width:280px; max-width:280px; background:#fff}
+
+  /* ---------- BANNER INTERMEDIO ---------- */
+  .mid-banner{margin:18px 0 10px}
+  .mid-banner .inner{
+    border-radius:16px; overflow:hidden; border:1px solid var(--line);
+    background:#fff; box-shadow:0 8px 20px rgba(0,0,0,.04)
+  }
+  .mid-banner img{width:100%; height:auto; display:block}
+
+  /* ---------- WHY ---------- */
+  .why-wrapper{margin-top:24px}
+  .why-title{text-align:center;margin:0 0 18px;font-size:clamp(22px,2.6vw,32px);font-weight:800}
+  .why-grid{display:grid;gap:18px;grid-template-columns:repeat(6,1fr)}
+  @media (max-width:1100px){ .why-grid{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width:640px){ .why-grid{grid-template-columns:repeat(2,1fr)} }
+  .why-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.04)}
+  .why-ico{width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;background:#f7e7fb;color:#8a2b8f;margin-bottom:10px}
+  .why-card h4{margin:6px 0 6px;font-size:16px}
+  .why-card p{margin:0;color:#555;font-size:14px}
+</style>
+
+<!-- HERO  -->
+<section class="hero">
+  <div>
+    <h1>Cursos intensivos</h1>
+    <div class="sub">Online</div>
+
+    <p class="lead">Hacelo en cualquier parte del mundo, en el horario que quieras.</p>
+
+    <ul>
+      <li>100% online</li>
+      <li>Sin horarios</li>
+      <li>Acceso para siempre</li>
+    </ul>
+
+    <p class="hero-note">
+      ¡Somos Creadores De Confianza!<br>
+      Estudia con <strong>INFINITO</strong>…<br>
+      <span style="font-weight:800">Hace La Diferencia</span>
+    </p>
+  </div>
+
+  <div class="hero-img">
+    <img src="https://infinitocapacitaciones.com/wp-content/uploads/2025/05/Foto-inicio--350x350.png"
+         alt="Infinito Capacitaciones">
+  </div>
+</section>
+
+
+<!-- Carrusel: Todos los cursos -->
+<section class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h2 style="margin:0">Todos los cursos</h2>
+    <a class="btn-outline" href="{% url 'lms:catalog' %}">Ver cursos</a>
+  </div>
+
+  {% if courses %}
+    <div class="carousel">
+      {% for c in courses %}
+        <article class="card course-card">
+          <img src="{{ c.image_url|default:'https://via.placeholder.com/640x360?text=Curso' }}"
+               alt="{{ c.title }}"
+               style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; border:1px solid var(--line)">
+          <h3 style="margin:10px 0 6px">{{ c.title }}</h3>
+          <p class="muted" style="min-height:3em">{{ c.description|default:''|truncatechars:110 }}</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px">
+            <a class="btn" href="{% url 'lms:course_detail' c.slug %}">Ver curso</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Sin cursos por el momento.</p>
+  {% endif %}
+</section>
+
+<!-- Carrusel: Todas las capacitaciones -->
+<section class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h2 style="margin:0">Todas las capacitaciones</h2>
+    <a class="btn-outline" href="{% url 'lms:catalog' %}">Ver catálogo</a>
+  </div>
+
+  {% if trainings %}
+    <div class="carousel">
+      {% for t in trainings %}
+        <article class="card course-card">
+          <img src="{{ t.image_url|default:'https://via.placeholder.com/640x360?text=Capacitaci%C3%B3n' }}"
+               alt="{{ t.title }}"
+               style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; border:1px solid var(--line)">
+          <h3 style="margin:10px 0 6px">{{ t.title }}</h3>
+          <p class="muted" style="min-height:3em">{{ t.description|default:''|truncatechars:110 }}</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px">
+            <a class="btn" href="{% url 'lms:course_detail' t.slug %}">Ver curso</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Sin capacitaciones por el momento.</p>
+  {% endif %}
+</section>
+
+<!-- BANNER INTERMEDIO  -->
+<section class="mid-banner">
+  <div class="inner">
+    <img src="https://infinitocapacitaciones.com/wp-content/uploads/2025/06/2.png" alt="Productos Collage">
+  </div>
+</section>
+
+<!-- ¿Por qué elegir Infinito? -->
+<section class="why-wrapper">
+  <h2 class="why-title">¿Por Qué Debes Elegir <span style="color:#8a2b8f">Infinito</span>?</h2>
+  <div class="why-grid">
+    <article class="why-card">
+      <div class="why-ico">✓</div>
+      <h4>Flexibilidad Total</h4>
+      <p>Aprendé desde cualquier lugar y a tu ritmo, sólo necesitás Internet.</p>
+    </article>
+    <article class="why-card">
+      <div class="why-ico">$</div>
+      <h4>Ahorro Económico</h4>
+      <p>Formación online accesible: sin traslados ni gastos extra.</p>
+    </article>
+    <article class="why-card">
+      <div class="why-ico">⟳</div>
+      <h4>Contenido Actualizado</h4>
+      <p>Material de estudio vigente y en constante mejora.</p>
+    </article>
+    <article class="why-card">
+      <div class="why-ico">✎</div>
+      <h4>Aprendizaje Personalizado</h4>
+      <p>Elegí tu camino, enfocándote en los temas que te potencian.</p>
+    </article>
+    <article class="why-card">
+      <div class="why-ico">▣</div>
+      <h4>Seguimiento y Soporte</h4>
+      <p>Retroalimentación constante para monitorear tu progreso.</p>
+    </article>
+    <article class="why-card">
+      <div class="why-ico">★</div>
+      <h4>Cultura de Crecimiento</h4>
+      <p>Comunidad que impulsa el aprendizaje y el intercambio.</p>
+    </article>
+  </div>
+</section>
+
+{% endblock %}

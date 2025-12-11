@@ -1,0 +1,47 @@
+{% extends "lms/base.html" %}
+{% block title %}Usuario — {{ the_user.username }}{% endblock %}
+{% block content %}
+
+<h1 style="margin:0 0 8px">Usuario: {{ the_user.username }}</h1>
+<p class="muted" style="margin-top:-4px">{{ the_user.get_full_name|default:'(sin nombre)' }} — {{ the_user.email }}</p>
+
+<h2 style="margin:12px 0 8px">Compras</h2>
+<div class="card">
+  <ul style="margin:0;padding-left:18px">
+    {% for p in purchases %}
+      <li>
+        #{{ p.id }} — {{ p.created_at|date:"d/m/Y H:i" }} —
+        {% if p.status == 'paid' %}<strong>Pagado</strong>{% else %}{{ p.status|default:"pendiente" }}{% endif %}
+        <ul>
+          {% for it in p.items.all %}
+            <li>
+              {% if it.stage %} Etapa: {{ it.stage.title }}
+              {% elif it.bundle %} Curso completo: {{ it.bundle.title }}
+              {% else %} Item{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+    {% empty %}
+      <li class="muted">Sin compras.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<h2 style="margin:12px 0 8px">Avances por etapa</h2>
+<div class="card">
+  <ul style="margin:0;padding-left:18px">
+    {% for s in progresses %}
+      <li>
+        {{ s.stage.course.title }} — {{ s.stage.title }}:
+        {% if s.passed %}Aprobada{% else %}En progreso{% endif %}
+        {% if s.score %}(score: {{ s.score }}){% endif %}
+      </li>
+    {% empty %}
+      <li class="muted">Sin avances registrados.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<p style="margin-top:14px"><a class="btn-outline" href="{% url 'lms:admin_panel' %}">← Volver al panel</a></p>
+{% endblock %}

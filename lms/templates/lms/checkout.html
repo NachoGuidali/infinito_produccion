@@ -1,0 +1,130 @@
+{% extends 'lms/base.html' %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+
+<h1>Checkout</h1>
+
+{# ✓ AVISO SOLO SI YA SUBIERON COMPROBANTE #}
+{% if purchase.status == 'pending' and purchase.transfer_receipt %}
+  <div class="card" style="background:#fff9ef;border:1px solid #ffd9a6;padding:16px;margin:0 0 16px;border-radius:16px">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="width:8px;height:8px;background:#f0a000;border-radius:50%;margin-top:8px"></div>
+      <div>
+        <strong style="display:block;margin-bottom:6px">Estamos verificando tu pago</strong>
+        <p style="margin:0 0 6px">
+          Tu comprobante fue enviado correctamente. Estamos validando la transferencia.
+          Volvé a ingresar en unos minutos para acceder a tu curso. Si el pago es aprobado,
+          tu acceso se activará automáticamente y lo verás en <strong>Mi perfil</strong>.
+        </p>
+        <p class="muted" style="margin:0">
+          Comprobante cargado: <a href="{{ purchase.transfer_receipt.url }}" target="_blank">ver archivo</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div>
+      <strong>Compra #{{ purchase.id }}</strong>
+      <div class="muted">Estado: {{ purchase.get_status_display|default:purchase.status }}</div>
+    </div>
+    <div style="font-size:22px;font-weight:800">
+      Total: ${{ purchase.total_ars|floatformat:0 }}
+    </div>
+  </div>
+
+  {% if purchase.items.all %}
+    <ul style="margin:10px 0 0 18px">
+      {% for it in purchase.items.all %}
+        <li>
+          {% if it.stage %}Etapa: {{ it.stage.title }} ({{ it.stage.course.title }})
+          {% elif it.bundle %}Curso completo: {{ it.bundle.course.title }}
+          {% else %}Ítem{% endif %}
+          — ${{ it.price_ars|floatformat:0 }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+
+<div class="grid grid-2">
+  <!-- === Transferencia bancaria === -->
+  <section class="card">
+    <h2 style="margin:0 0 8px">Transferencia bancaria</h2>
+    <p class="muted" style="margin:6px 0 12px">
+      Transferí el total y subí el comprobante para que podamos aprobar tu compra.
+    </p>
+
+    <div style="background:#fff7ff;border:1px dashed #f2b7e8;border-radius:12px;padding:12px;margin:0 0 12px">
+      <div><strong>Alias:</strong> <code style="font-weight:800">INFINITO.CAPACITACIONES.ALIAS</code></div>
+      <div><strong>CUIT:</strong> 20-12345678-9</div>
+      <div><strong>Concepto:</strong> Compra #{{ purchase.id }}</div>
+      <!-- Editá los datos de arriba a tus reales -->
+    </div>
+
+    {% if purchase.payment_method == 'transfer' and purchase.transfer_receipt %}
+      <div class="badge" style="display:inline-block;background:#fff2d8;color:#7a4a18;border-radius:999px;padding:6px 10px;margin-bottom:8px">
+        Transferencia declarada
+      </div>
+      <p class="muted" style="margin:8px 0">
+        Comprobante subido: <a href="{{ purchase.transfer_receipt.url }}" target="_blank">ver archivo</a>.
+      </p>
+    {% endif %}
+
+    {% if purchase.status != 'paid' %}
+      <form method="post" action="{% url 'lms:checkout' %}" enctype="multipart/form-data" class="card" style="background:#fafafa">
+        {% csrf_token %}
+        <input type="hidden" name="purchase_id" value="{{ purchase.id }}">
+        <input type="hidden" name="action" value="submit_transfer">
+        <div style="display:grid;gap:10px">
+          <label>
+            <span style="display:block;font-weight:700;margin-bottom:4px">Subir comprobante (PDF/JPG/PNG)</span>
+            <input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png" required />
+          </label>
+          <button class="btn" type="submit">Enviar comprobante</button>
+        </div>
+      </form>
+      <p class="muted" style="margin-top:8px">
+        Una vez recibido, lo marcás como <strong>Pagado</strong> desde el panel admin.
+      </p>
+    {% else %}
+      <p class="muted" style="margin-top:8px">
+        Esta compra ya está marcada como <strong>Pagada</strong>.
+      </p>
+    {% endif %}
+  </section>
+
+  <!-- === Mercado Pago (producción) === -->
+  <section class="card">
+    <h2 style="margin:0 0 8px">Mercado Pago</h2>
+    <p class="muted" style="margin:6px 0 12px">
+      Pagá con tarjeta o saldo de Mercado Pago. Al aprobarse, tu acceso se activa automáticamente.
+    </p>
+
+    {% if purchase.status == 'paid' %}
+      <div class="badge" style="display:inline-block;background:#e7f9ed;color:#187a3d;border-radius:999px;padding:6px 10px;">
+        Ya pagado
+      </div>
+      <p class="muted" style="margin-top:8px">
+        Ya registramos el pago de esta compra. Revisá tus cursos en <strong>Mi perfil</strong>.
+      </p>
+    {% else %}
+      {% if mp_init_point %}
+        <div class="card" style="background:#fafafa;border-radius:12px;padding:12px">
+          <a class="btn" href="{{ mp_init_point }}">Pagar con Mercado Pago</a>
+          <p class="muted" style="margin-top:8px">
+            Te redirigimos a la pasarela de Mercado Pago. Al aprobarse, recibirás el acceso al curso automáticamente.
+          </p>
+        </div>
+      {% else %}
+        <p class="muted">
+          El medio de pago Mercado Pago no está disponible en este momento. Podés completar la compra por transferencia.
+        </p>
+      {% endif %}
+    {% endif %}
+  </section>
+</div>
+
+{% endblock %}

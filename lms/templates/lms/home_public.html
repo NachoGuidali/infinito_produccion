@@ -1,0 +1,40 @@
+{% extends "lms/base.html" %}
+{% block title %}Inicio — Infinito Capacitaciones{% endblock %}
+
+{# 👉 si ya usás body_class en base.html, dejame identificar esta página como "guest" #}
+{% block body_class %}page-home page-home--guest{% endblock %}
+
+{% block content %}
+<section class="card hero hero--guest" style="background:#ffffffcc; backdrop-filter:saturate(1.1) blur(2px)">
+  <div class="hero-wrap">
+    <div>
+      <h1>Formate con <span class="hero-accent">Infinito</span></h1>
+
+      <p class="lead">
+        Cursos intensivos 100% online. Sin horarios. Acceso para siempre.
+      </p>
+
+      <ul class="hero-bullets">
+        <li>Clases en video</li>
+        <li>Material descargable</li>
+        <li>Evaluaciones por etapa</li>
+      </ul>
+
+      <div class="hero-cta">
+        {# 🔹 Antes iba a /admin/login/, ahora va al login normal de usuarios #}
+        <a class="btn" href="{% url 'login' %}">Comenzar</a>
+        <a class="btn-outline" href="{% url 'lms:catalog' %}">Ver cursos</a>
+        <a class="btn-outline" href="#" onclick="alert('Tienda próximamente')">Ver productos</a>
+        <a href="{% url 'lms:signup' %}" class="btn">Crear cuenta</a>
+      </div>
+    </div>
+
+    <!-- <div class="hero-img">
+      <img
+        src="https://via.placeholder.com/800x500?text=Infinito+Capacitaciones"
+        alt="Infinito Capacitaciones"
+      />
+    </div> -->
+  </div>
+</section>
+{% endblock %}

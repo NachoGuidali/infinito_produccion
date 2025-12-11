@@ -1,0 +1,18 @@
+{% extends "lms/base.html" %}
+{% block title %}Revisá tu correo — Infinito Capacitaciones{% endblock %}
+
+{% block content %}
+<div class="container-narrow">
+  <div class="card" style="text-align:center">
+    <h1 style="margin:0 0 8px">¡Casi listo!</h1>
+    <p>Te enviamos un email para <strong>confirmar tu cuenta</strong>. Abrí el correo y hacé clic en el enlace de activación.</p>
+    <p class="help" style="margin-top:8px">
+      Si no lo encontrás, revisá la carpeta de <em>Spam</em> o <em>Promociones</em>.
+    </p>
+    <div style="margin-top:16px">
+      <a class="btn btn-outline" href="{% url 'lms:home' %}">Volver al inicio</a>
+      <a class="btn" href="{% url 'login' %}">Ir a iniciar sesión</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

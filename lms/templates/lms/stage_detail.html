@@ -1,0 +1,102 @@
+{% extends 'lms/base.html' %}
+{% block title %}Etapa {{ stage.order }} — {{ stage.title }}{% endblock %}
+{% block content %}
+<h1>Etapa {{ stage.order }} — {{ stage.title }}</h1>
+
+{% if blocked_reason %}
+  <div class="card">⚠️ {{ blocked_reason }}</div>
+  <p><a class="btn" href="{% url 'lms:course_detail' stage.course.slug %}">Volver</a></p>
+{% else %}
+
+  {% if stage.pdf_url %}
+    <div class="card">
+      <h3>Material PDF de la etapa</h3>
+      <iframe src="{{ stage.pdf_url|safe }}" style="width:100%;height:600px;border:none"></iframe>
+      <p><a class="btn secondary" href="{{ stage.pdf_url }}" target="_blank">Descargar PDF</a></p>
+    </div>
+  {% endif %}
+
+  <h3>Clases</h3>
+  {% for les in lessons %}
+    <div class="card">
+      <h4>{{ les.title }}</h4>
+
+      {% if les.youtube_url %}
+  {# Solo pinto el contenedor si hay URL válida #}
+  <div class="ytbox"
+       id="yt-{{ forloop.counter0 }}"
+       data-url="{{ les.youtube_url|escape }}"
+       style="position:relative;width:100%;max-width:960px;aspect-ratio:16/9;background:#000;overflow:hidden;border-radius:12px">
+  </div>
+{% endif %}
+
+      {% if les.pdf_url %}
+        <div style="margin-top:12px">
+          <iframe src="{{ les.pdf_url|safe }}" style="width:100%;height:480px;border:none"></iframe>
+          <p><a class="btn secondary" href="{{ les.pdf_url }}" target="_blank">Descargar PDF</a></p>
+        </div>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p>No hay clases.</p>
+  {% endfor %}
+
+  {% if stage.quiz %}
+    <p><a class="btn" href="{% url 'lms:quiz_take' stage.course.slug stage.slug %}">Rendir quiz</a></p>
+  {% endif %}
+
+{% endif %}
+
+{# IFrame API + fallback elegante (thumbnail + "Ver en YouTube") #}
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+(function(){
+  function ytId(u){
+    try{
+      const url = new URL(u);
+      const h = url.hostname;
+      if (h.endsWith('youtu.be')) return url.pathname.replace('/','');
+      if (h.includes('youtube.com')){
+        if (url.pathname.startsWith('/watch')) return (url.searchParams.get('v')||'');
+        if (url.pathname.startsWith('/shorts/')) return url.pathname.split('/shorts/')[1];
+        if (url.pathname.startsWith('/embed/'))  return url.pathname.split('/embed/')[1];
+      }
+    }catch(e){}
+    return '';
+  }
+
+  function fallback(box, id, watchUrl){
+    var thumb = id ? 'https://img.youtube.com/vi/'+id+'/hqdefault.jpg' : '';
+    box.innerHTML =
+      '<a href="'+(watchUrl||("https://www.youtube.com/watch?v="+id))+'" target="_blank" rel="noopener" '+
+      'style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;' +
+      'font:600 18px/1.2 system-ui;text-decoration:none;background:rgba(0,0,0,.2)">▶ Ver video en YouTube</a>' +
+      (thumb ? '<img alt="" src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;opacity:.7">' : '');
+  }
+
+  window.onYouTubeIframeAPIReady = function(){
+    document.querySelectorAll('.ytbox').forEach(function(box){
+      var url = box.getAttribute('data-url') || '';
+      var id  = ytId(url);
+      if (!id){ fallback(box, '', url); return; }
+
+      new YT.Player(box, {
+        videoId: id,
+        playerVars: {
+          rel: 0, modestbranding: 1,
+          origin: location.origin
+        },
+        events: {
+          onError: function(e){
+            // 101 / 150 = el dueño bloqueó la inserción; 5 = no reproducible en embed
+            if (e && (e.data === 101 || e.data === 150 || e.data === 5)) {
+              fallback(box, id, url);
+            }
+          }
+        }
+      });
+    });
+  };
+})();
+</script>
+{% endblock %}

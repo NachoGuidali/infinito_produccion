@@ -1,0 +1,12 @@
+{% if messages %}
+<div class="messages-wrapper" role="status" aria-live="polite">
+  {% for message in messages %}
+    {% with lvl=message.tags %}
+    <div class="msg {% if 'error' in lvl %}error{% elif 'info' in lvl %}info{% endif %}">
+      <div>{{ message }}</div>
+      <button data-close aria-label="Cerrar">×</button>
+    </div>
+    {% endwith %}
+  {% endfor %}
+</div>
+{% endif %}
