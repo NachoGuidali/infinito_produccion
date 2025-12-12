@@ -1,0 +1,33 @@
+# --- Python / Django ---
+__pycache__/
+*.py[cod]
+*.log
+*.pot
+*.mo
+
+# --- Virtualenv ---
+venv/
+.env
+.env.*
+.envrc
+
+# --- Django ---
+db.sqlite3
+*.sqlite3
+
+# media (subidas de usuarios)
+media/
+
+# static collect (si usás collectstatic en prod)
+staticfiles/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# --- Node / build (si tuvieras) ---
+node_modules/
+dist/
+build/
