@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-unsafe")  # en prod, ponelo en .env
 DEBUG = os.getenv("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = ['127.0.0.1', 'infinitocapacitaciones.com', 'www.infinitocapacitaciones.com']
 
 # -------------------------
 # Apps
@@ -46,6 +46,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+AUTHENTICATION_BACKENDS = [
+    "lms.backends.EmailOrUsernameBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -152,3 +157,5 @@ MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "")
 MP_PUBLIC_KEY   = os.getenv("MP_PUBLIC_KEY", "")
 MP_WEBHOOK_URL  = os.getenv("MP_WEBHOOK_URL", "")
 MP_SUCCESS_URL  = os.getenv("MP_SUCCESS_URL", "")
+# Permite que el navegador envíe al menos el ORIGIN como referer a sitios externos (YouTube)
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

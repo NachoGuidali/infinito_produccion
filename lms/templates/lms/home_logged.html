@@ -1,4 +1,5 @@
 {% extends "lms/base.html" %}
+{% load static %}
 {% block title %}Inicio — Infinito Capacitaciones{% endblock %}
 {% block content %}
 
@@ -72,7 +73,7 @@
   </div>
 
   <div class="hero-img">
-    <img src="https://infinitocapacitaciones.com/wp-content/uploads/2025/05/Foto-inicio--350x350.png"
+    <img src="{% static 'media/portada.jpeg' %}"
          alt="Infinito Capacitaciones">
   </div>
 </section>
@@ -135,7 +136,7 @@
 <!-- BANNER INTERMEDIO  -->
 <section class="mid-banner">
   <div class="inner">
-    <img src="https://infinitocapacitaciones.com/wp-content/uploads/2025/06/2.png" alt="Productos Collage">
+    <img src="{% static 'media/collage.jpeg' %}" alt="Productos Collage">
   </div>
 </section>
 

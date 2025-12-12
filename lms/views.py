@@ -34,15 +34,18 @@ from .models import (
     Purchase,
     Profile,
 )
-from .forms import QuizForm, SignupForm
+from .forms import QuizForm, SignupForm, LoginForm
 from .services.access import can_view_stage
 from .services.payments import (
     create_checkout,
     mark_paid_and_grant,
     create_mp_preference_for_purchase,
 )
+from django.contrib.auth.views import LoginView
 
 
+class CustomLoginView(LoginView):
+    authentication_form = LoginForm
 # =======================
 # Helpers (avatar + gravatar + activación)
 # =======================

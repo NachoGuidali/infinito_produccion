@@ -4,10 +4,14 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from datetime import date
+from django.contrib.auth.forms import AuthenticationForm
 
 from .models import Profile  # <— antes decía UserProfile
 
 User = get_user_model()
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(label="Email o usuario")
 
 def _build_username_from_email(email: str) -> str:
     base = slugify(email.split("@")[0]) or "user"
@@ -92,14 +96,26 @@ class SignupForm(forms.Form):
             user.is_active = False
             user.save(update_fields=["is_active"])
 
-        profile = Profile.objects.create(
+        profile, created = Profile.objects.get_or_create(
             user=user,
-            dni=data["dni"].strip(),
-            telefono=data["telefono"].strip(),
-            birth_date=data["fecha_nacimiento"],
-            address=data.get("direccion", "").strip(),
-            postal_code=data.get("codigo_postal", "").strip(),
+            defaults={
+                "dni": data["dni"].strip(),
+                "telefono": data["telefono"].strip(),
+                "birth_date": data["fecha_nacimiento"],
+                "address": data.get("direccion", "").strip(),
+                "postal_code": data.get("codigo_postal", "").strip(),
+            }
         )
+
+        # Si ya existía, actualizamos campos (por si se había creado “vacío”)
+        if not created:
+            profile.dni = data["dni"].strip()
+            profile.telefono = data["telefono"].strip()
+            profile.birth_date = data["fecha_nacimiento"]
+            profile.address = data.get("direccion", "").strip()
+            profile.postal_code = data.get("codigo_postal", "").strip()
+            profile.save(update_fields=["dni","telefono","birth_date","address","postal_code"])
+
         avatar = data.get("avatar")
         if avatar:
             profile.avatar = avatar
