@@ -159,3 +159,9 @@ MP_WEBHOOK_URL  = os.getenv("MP_WEBHOOK_URL", "")
 MP_SUCCESS_URL  = os.getenv("MP_SUCCESS_URL", "")
 # Permite que el navegador envíe al menos el ORIGIN como referer a sitios externos (YouTube)
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
