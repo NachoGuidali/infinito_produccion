@@ -1,3 +1,4 @@
+{% load static %}
 {% extends "lms/base.html" %}
 {% block title %}Inicio — Infinito Capacitaciones{% endblock %}
 
@@ -29,12 +30,12 @@
       </div>
     </div>
 
-    <!-- <div class="hero-img">
+    <div class="hero-img">
       <img
-        src="https://via.placeholder.com/800x500?text=Infinito+Capacitaciones"
+        src="{% static 'media/portada.jpeg' %}"
         alt="Infinito Capacitaciones"
       />
-    </div> -->
+    </div> 
   </div>
 </section>
 {% endblock %}

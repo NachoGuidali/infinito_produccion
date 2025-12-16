@@ -133,8 +133,24 @@ LOGOUT_REDIRECT_URL = 'lms:home' # a dónde ir después de salir
 # En desarrollo: imprime los mails en consola.
 # En producción: cambiá EMAIL_BACKEND y credenciales SMTP.
 # -------------------------
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Infinito <no-reply@infinito.local>')
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = "capacitacionesinfinito@gmail.com"
+EMAIL_HOST_PASSWORD = "upig hakj kthn gurm"
+
+DEFAULT_FROM_EMAIL = "Infinito Capacitaciones <capacitacionesinfinito@gmail.com>"
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+CSRF_TRUSTED_ORIGINS = ["https://infinitocapacitaciones.com", "https://www.infinitocapacitaciones.com"]
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # Ejemplo de configuración SMTP para prod (descomentá y setea variables):
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -161,7 +177,5 @@ MP_SUCCESS_URL  = os.getenv("MP_SUCCESS_URL", "")
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+
+

@@ -88,7 +88,8 @@ def _send_activation_email(request, user):
         f"Para activar tu cuenta hacé clic en el siguiente enlace:\n\n{url}\n\n"
         f"Si no te registraste vos, ignorá este correo."
     )
-    send_mail(subject, message, None, [user.email], fail_silently=True)
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+    #send_mail(subject, message, None, [user.email], fail_silently=True)
 
 
 # =======================
