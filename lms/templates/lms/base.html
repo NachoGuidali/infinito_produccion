@@ -26,6 +26,8 @@
     }
 
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       margin: 0;
@@ -33,15 +35,21 @@
       color: var(--color-texto);
       position: relative;
       min-height: 100vh;
-      padding-bottom: 5rem;
-    }
-    .footer{
+
+      /* ✅ Mantener flex layout para “pegar” el footer abajo */
       display: flex;
-      bottom: 0;
-      position: fixed;
-      width: 100vw;
-      
+      flex-direction: column;
+
+      /* ✅ IMPORTANTE: esto dejaba hueco abajo y desalineaba el footer */
+      /* padding-bottom: 5rem; */
     }
+
+    .footer {
+      display: flex;
+      width: 100%;
+      /* si tenés fondo */
+    }
+
     body::before{
       content:"";
       position: fixed;
@@ -97,9 +105,18 @@
     .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-    main { padding: 24px 0 40px; }
+    /* ✅ Clave: hace que el contenido ocupe el alto disponible y empuje el footer abajo */
+    main {
+      padding: 24px 0 40px;
+      flex: 1;
+    }
 
-    footer { background:#edf3f5; border-top:1px solid var(--line); }
+    footer {
+      background:#edf3f5;
+      border-top:1px solid var(--line);
+      margin-top: auto; /* ✅ refuerzo */
+    }
+
     .footer-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
     .footer-left{font-size:14px}
     .social{display:flex;align-items:center;gap:10px}
@@ -258,34 +275,33 @@
 
       <!-- NAV -->
       <nav id="main-nav" aria-label="Principal">
-  <div class="nav-list">
-    <a href="{% url 'lms:home' %}" class="btn secondary">Inicio</a>
-    <a href="{% url 'lms:catalog' %}" class="btn secondary">Cursos y capacitaciones</a>
+        <div class="nav-list">
+          <a href="{% url 'lms:home' %}" class="btn secondary">Inicio</a>
+          <a href="{% url 'lms:catalog' %}" class="btn secondary">Cursos y capacitaciones</a>
 
-    {% if request.user.is_authenticated %}
-      <a href="{% url 'lms:profile' %}" class="btn secondary">Mi perfil</a>
-      {% if request.user.is_staff %}
-        <a href="{% url 'lms:admin_panel' %}" class="btn secondary">Panel</a>
-      {% endif %}
-      <span style="color:#fff; margin-left:8px">Hola, {{ request.user.username }}</span>
-      <a href="{% url 'lms:logout' %}" class="btn btn-outline">Cerrar sesión</a>
-    {% else %}
-      <a href="{% url 'lms:signup' %}" class="btn" aria-label="Crear cuenta">Crear cuenta</a>
-      <a href="{% url 'login' %}" class="btn btn-outline" aria-label="Iniciar sesión">Login</a>
-    {% endif %}
-  </div>
-</nav>
-
+          {% if request.user.is_authenticated %}
+            <a href="{% url 'lms:profile' %}" class="btn secondary">Mi perfil</a>
+            {% if request.user.is_staff %}
+              <a href="{% url 'lms:admin_panel' %}" class="btn secondary">Panel</a>
+            {% endif %}
+            <span style="color:#fff; margin-left:8px">Hola, {{ request.user.username }}</span>
+            <a href="{% url 'lms:logout' %}" class="btn btn-outline">Cerrar sesión</a>
+          {% else %}
+            <a href="{% url 'lms:signup' %}" class="btn" aria-label="Crear cuenta">Crear cuenta</a>
+            <a href="{% url 'login' %}" class="btn btn-outline" aria-label="Iniciar sesión">Login</a>
+          {% endif %}
+        </div>
+      </nav>
     </div>
   </header>
 
   {% include "lms/_messages.html" %}
 
   <main>
-    <div class="container">
-      {% block content %}{% endblock %}
-    </div>
-  </main>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</main>
 
   <footer class="footer">
     <div class="container footer-row">
@@ -299,7 +315,6 @@
       </div>
     </div>
   </footer>
-  
 
   <!-- WhatsApp global -->
   <a class="wa-fab" href="https://wa.me/5491130125525?text=Hola%20Infinito%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20cursos" target="_blank" aria-label="WhatsApp">
@@ -343,5 +358,4 @@
     })();
   </script>
 </body>
-
 </html>

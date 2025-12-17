@@ -2,44 +2,143 @@
 {% block title %}Carrito — Infinito Capacitaciones{% endblock %}
 {% block content %}
 
-<h1>Carrito</h1>
+<style>
+  .cart-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
 
-<div class="card" style="overflow:hidden">
-  <div style="display:grid; grid-template-columns: 1fr 180px 110px; gap:12px; font-weight:700; padding:10px 12px;">
-    <div>Item</div>
-    <div style="text-align:right">Precio</div>
-    <div></div>
-  </div>
+  .cart-card {
+    overflow: hidden;
+  }
 
-  {% if items %}
-    {% for it in items %}
-      <div class="card" style="margin:12px; display:grid; grid-template-columns: 1fr 180px 110px; gap:12px; align-items:center; background:#fff;">
-        <div>
-          <div class="card" style="padding:12px; background:#f9fafb; border-color:#eee">
-            <div style="font-weight:700">{{ it.title }}</div>
-            {% if it.course_title %}
-              <div class="muted" style="margin-top:4px">Curso: {{ it.course_title }}</div>
-            {% endif %}
-          </div>
-        </div>
-        <div style="text-align:right; font-weight:700">$ {{ it.price_ars }}</div>
-        <div style="text-align:right">
-          <a class="btn btn-outline" href="{% url 'lms:cart_remove' it.key %}">Quitar</a>
-        </div>
-      </div>
-    {% endfor %}
+  .cart-row {
+    display: grid;
+    grid-template-columns: 1fr 180px 110px;
+    gap: 12px;
+    align-items: center;
+    margin: 12px;
+    background: #fff;
+  }
 
-    <div class="card" style="margin:12px; display:grid; grid-template-columns: 1fr 180px 110px; gap:12px; align-items:center; background:#fff;">
-      <div class="card" style="background:#f9fafb; border-color:#eee; font-weight:700">Total</div>
-      <div style="text-align:right; font-weight:800">$ {{ total_ars }}</div>
-      <div style="text-align:right">
-        <a class="btn" href="{% url 'lms:cart_go_checkout' %}">Ir a pagar</a>
-      </div>
+  .cart-head {
+    font-weight: 700;
+    padding: 10px 12px;
+    margin: 0;
+  }
+
+  .item-box {
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #eee;
+    border-radius: 6px;
+  }
+
+  .item-title {
+    font-weight: 700;
+  }
+
+  .price {
+    text-align: right;
+    font-weight: 700;
+  }
+
+  .actions {
+    text-align: right;
+  }
+
+  .cart-total {
+    font-weight: 800;
+  }
+
+  .btn-full {
+    width: 100%;
+    text-align: center;
+  }
+  .btn {
+    text-align: center;
+  }
+
+  /* 📱 Mobile */
+  @media (max-width: 640px) {
+    .cart-row {
+      grid-template-columns: 1fr;
+    }
+
+    .cart-head {
+      display: none;
+    }
+
+    .price,
+    .actions {
+      text-align: left;
+    }
+
+    .actions .btn {
+      width: 100%;
+    }
+
+    .cart-total {
+      border-top: 2px solid #e5e7eb;
+      padding-top: 12px;
+    }
+  }
+</style>
+
+<div class="cart-wrapper">
+  <h1>Carrito</h1>
+
+  <div class="card cart-card">
+    <!-- Header desktop -->
+    <div class="cart-row cart-head">
+      <div>Item</div>
+      <div class="price">Precio</div>
+      <div></div>
     </div>
 
-  {% else %}
-    <p class="muted" style="padding:16px">Tu carrito está vacío.</p>
-  {% endif %}
+    {% if items %}
+      {% for it in items %}
+        <div class="cart-row">
+          <div>
+            <div class="item-box">
+              <div class="item-title">{{ it.title }}</div>
+              {% if it.course_title %}
+                <div class="muted" style="margin-top:4px">
+                  Curso: {{ it.course_title }}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="price">
+            $ {{ it.price_ars }}
+          </div>
+
+          <div class="actions">
+            <a class="btn btn-outline" href="{% url 'lms:cart_remove' it.key %}">
+              Quitar
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+
+      <!-- Total -->
+      <div class="cart-row cart-total">
+        <div>Total</div>
+        <div class="price">$ {{ total_ars }}</div>
+        <div class="actions">
+          <a class="btn btn-full" href="{% url 'lms:cart_go_checkout' %}">
+            Ir a pagar
+          </a>
+        </div>
+      </div>
+
+    {% else %}
+      <p class="muted" style="padding:16px">
+        Tu carrito está vacío.
+      </p>
+    {% endif %}
+  </div>
 </div>
 
 {% endblock %}
