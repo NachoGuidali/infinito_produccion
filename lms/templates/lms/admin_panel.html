@@ -106,7 +106,12 @@
             <span class="badge b-info">Transferencia</span>
             <div class="note">
               Comprobante:
-              <a href="{{ p.transfer_receipt.url }}" target="_blank">ver archivo</a>
+              <button
+  type="button"
+  class="btn-xs"
+  onclick="openReceipt('{{ p.transfer_receipt.url }}')">
+  ver comprobante
+</button>
             </div>
           {% elif p.external_ref %}
             <span class="badge b-info">MP / Ref: {{ p.external_ref }}</span>
@@ -178,6 +183,29 @@
     </tbody>
   </table>
 </div>
+<div id="receiptModal"
+     style="
+       display:none;
+       position:fixed;
+       inset:0;
+       background:rgba(0,0,0,.75);
+       z-index:9999;
+       align-items:center;
+       justify-content:center;
+     "
+     onclick="closeReceipt()">
+
+  <img id="receiptImg"
+       src=""
+       style="
+         max-width:90vw;
+         max-height:90vh;
+         background:#fff;
+         border-radius:12px;
+         box-shadow:0 20px 60px rgba(0,0,0,.4);
+       "
+       onclick="event.stopPropagation()">
+</div>
 
 <script>
 function sel(e,id){
@@ -188,5 +216,22 @@ function sel(e,id){
   document.getElementById(id).style.display='block';
 }
 </script>
+
+<script>
+function openReceipt(url) {
+  const modal = document.getElementById('receiptModal');
+  const img = document.getElementById('receiptImg');
+  img.src = url;
+  modal.style.display = 'flex';
+}
+
+function closeReceipt() {
+  const modal = document.getElementById('receiptModal');
+  const img = document.getElementById('receiptImg');
+  img.src = '';
+  modal.style.display = 'none';
+}
+</script>
+
 
 {% endblock %}

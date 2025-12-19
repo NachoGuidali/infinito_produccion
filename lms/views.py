@@ -220,9 +220,12 @@ def course_detail(request, slug):
         # Etapas aprobadas
         passed_by_id = set(
             StageProgress.objects.filter(
-                user=request.user, stage_id__in=stage_ids, passed=True
+                user=request.user,
+                passed=True,
+                stage__course=course
             ).values_list("stage_id", flat=True)
         )
+
         # Curso “completado” si aprobó todas las etapas
         if stage_ids and stage_ids.issubset(passed_by_id):
             course_completed = True
