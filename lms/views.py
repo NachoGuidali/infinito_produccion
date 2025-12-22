@@ -304,11 +304,49 @@ def course_detail(request, slug):
 # =======================
 # DIPLOMA / CERTIFICADO DE CURSO (por ahora acceso directo)
 # =======================
+# @login_required
+# def course_certificate(request, slug):
+#     course = get_object_or_404(Course, slug=slug)
+
+#     completion_date = timezone.now()
+#     full_name = (request.user.get_full_name() or request.user.username).strip()
+
+#     return render(
+#         request,
+#         "lms/course_certificate.html",
+#         {
+#             "course": course,
+#             "user_fullname": full_name,
+#             "completion_date": completion_date,
+#         },
+#     )
+
+from django.db.models import Max
+
 @login_required
 def course_certificate(request, slug):
     course = get_object_or_404(Course, slug=slug)
 
-    completion_date = timezone.now()
+    total_stages = course.stages.count()
+
+    # Etapas aprobadas por el usuario
+    passed_qs = StageProgress.objects.filter(
+        user=request.user,
+        stage__course=course,
+        passed=True
+    )
+
+    passed_count = passed_qs.count()
+
+    # 🚫 No completó el curso
+    if total_stages == 0 or passed_count != total_stages:
+        return HttpResponseForbidden("El curso no está finalizado.")
+
+    # 📅 Fecha real de finalización = última etapa aprobada
+    completion_date = passed_qs.aggregate(
+        completed_at=Max("passed_at")
+    )["completed_at"]
+
     full_name = (request.user.get_full_name() or request.user.username).strip()
 
     return render(
@@ -320,6 +358,8 @@ def course_certificate(request, slug):
             "completion_date": completion_date,
         },
     )
+
+
 
 
 # =======================
