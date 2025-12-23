@@ -60,7 +60,7 @@
   .certificado-inner {
     width: 100%;
     height: 100%;
-    padding: 14mm 24mm 10mm;
+    padding: 4mm 24mm 14mm;
     box-sizing: border-box;
   }
 
@@ -99,10 +99,10 @@
       <div class="certificado-inner" style="position:relative; z-index:1;">
         {# CABECERA CON LOGO Y TEXTO #}
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div style="display:flex; align-items:center; gap:12px; margin-left: 20px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-left: 50px; ">
             <img src="{% static 'lms/logo_infinito.png' %}"
                  alt="Infinito Centro de Capacitación"
-                 style="height:90px; width:auto; object-fit:contain;">
+                 style="height:90px; width:auto; object-fit:contain; margin-top: 20px;">
           </div>
 
           <div style="text-align:right; font-size:13px; color:#444; max-width:260px;">
@@ -111,8 +111,8 @@
         </div>
 
         {# TÍTULO CENTRAL #}
-        <div style="text-align:center; margin-bottom:16px;">
-          <div style="letter-spacing:.20em; font-size:42px; text-transform:uppercase; color:#333; margin-bottom:10px;">
+        <div style="text-align:center; margin-bottom:12px;">
+          <div style="letter-spacing:.20em; font-size:42px; text-transform:uppercase; color:#333; margin-bottom:8px;">
             INFINITO <br> CENTRO DE CAPACITACIÓN
           </div>
           <div style="font-size:22px; font-weight:600; margin-bottom:6px;">
@@ -157,19 +157,19 @@
         </div>
 
         {# FIRMA + LOGOS INFERIORES #}
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:24px; ">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:24px;">
           <div style="text-align:center; flex:1;">
             <img src="{% static 'lms/firma_maria_alejandra.png' %}"
                  alt="Firma María Alejandra Torcianti"
-                 style="height:180px; object-fit:contain; ">
+                 style="height:160px; object-fit:contain; ">
             <div style="border-top:1px solid #000; width:80%; margin:0 auto 4px;"></div>
             <div style="font-size:13px; font-weight:600;">María Alejandra Torcianti</div>
-            <div style="font-size:12px;">Facilitadora</div>
+            <div style="font-size:12px;">Directora</div>
           </div>
 
           <div style="flex:1; display:flex; justify-content:flex-end; gap:20px; align-items:center;">
             <!-- <img src="{% static 'lms/logo_fapya.png' %}" alt="Infinito" style="height:150px; object-fit:contain;"> -->
-            <img src="{% static 'lms/logo_aceyba.png' %}" alt="ACYEBA" style="height:150px; object-fit:contain; margin-right: 30px;">
+            <img src="{% static 'lms/logo_aceyba.png' %}" alt="ACYEBA" style="height:150px; object-fit:contain; margin-right: 40px; margin-top: -10px;">
           </div>
         </div>
 
