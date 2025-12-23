@@ -60,7 +60,7 @@
   .certificado-inner {
     width: 100%;
     height: 100%;
-    padding: 22mm 28mm 18mm;
+    padding: 14mm 24mm 10mm;
     box-sizing: border-box;
   }
 
@@ -78,7 +78,7 @@
        position:relative;
         width:100%;
         max-width:1100px;
-        padding:40px 60px 80px;
+        padding:10px 20px 30px;
         background:#ffffff;
         border-radius:28px;
         box-shadow:0 20px 60px rgba(0,0,0,.18);
@@ -98,29 +98,24 @@
 
       <div class="certificado-inner" style="position:relative; z-index:1;">
         {# CABECERA CON LOGO Y TEXTO #}
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px;">
-          <div style="display:flex; align-items:center; gap:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="display:flex; align-items:center; gap:12px; margin-left: 20px;">
             <img src="{% static 'lms/logo_infinito.png' %}"
                  alt="Infinito Centro de Capacitación"
-                 style="height:150px; width:auto; object-fit:contain;">
+                 style="height:90px; width:auto; object-fit:contain;">
           </div>
 
           <div style="text-align:right; font-size:13px; color:#444; max-width:260px;">
-            <div style="font-weight:600; letter-spacing:.18em; text-transform:uppercase;">
-              INFINITO
-            </div>
-            <div style="font-weight:500; letter-spacing:.12em; text-transform:uppercase;">
-              CENTRO DE CAPACITACIÓN
-            </div>
+            
           </div>
         </div>
 
         {# TÍTULO CENTRAL #}
-        <div style="text-align:center; margin-bottom:34px;">
-          <div style="letter-spacing:.20em; font-size:13px; text-transform:uppercase; color:#333; margin-bottom:10px;">
-            INFINITO CENTRO DE CAPACITACIÓN
+        <div style="text-align:center; margin-bottom:16px;">
+          <div style="letter-spacing:.20em; font-size:42px; text-transform:uppercase; color:#333; margin-bottom:10px;">
+            INFINITO <br> CENTRO DE CAPACITACIÓN
           </div>
-          <div style="font-size:16px; font-weight:600; margin-bottom:6px;">
+          <div style="font-size:22px; font-weight:600; margin-bottom:6px;">
             Certifica que
           </div>
         </div>
@@ -128,57 +123,58 @@
         {# NOMBRE #}
         <div style="text-align:center; margin-bottom:24px;">
           <div style="
-            font-size:26px;
+            font-size:36px;
             font-weight:700;
             border-bottom:1px solid #333;
-            padding-bottom:4px;
+            
             display:inline-block;
             min-width:260px;
+            letter-spacing: 2px;
           ">
             {{ user_fullname }}
           </div>
         </div>
 
         {# TEXTO DEL CURSO #}
-        <div style="text-align:center; font-size:16px; color:#222; line-height:1.6; margin-bottom:26px;">
-          ha rendido las pruebas teórico-prácticas del curso de
+        <div style="text-align:center; font-size:16px; color:#000000; line-height:1.6; margin-bottom:22px; font-weight: bold;">
+          ha aprobado los contenidos teórico-prácticos del curso de
           <br>
-          <span style="display:inline-block; margin-top:10px; font-weight:700; font-size:20px;">
-            {{ course.title }}
+          <span style="display:inline-block; margin-top:10px; font-weight:700; font-size:32px; letter-spacing: 2px;">
+            {{ course.title|title }}
           </span>
           <br>
-          <span style="display:inline-block; margin-top:10px;">
+          <span style="display:inline-block; margin-top:10px; font-weight: bold;">
             completándolo satisfactoriamente.
           </span>
         </div>
 
         {# LUGAR Y FECHA #}
-        <div style="text-align:center; font-size:15px; margin:30px 0 40px; color:#333;">
+        <div style="text-align:center; font-size:20px;  color:#333;">
           Lugar y fecha:
-          <span style="font-weight:600;">
+          <span style="font-weight: bold;">
             Buenos Aires, {{ completion_date|date:"d/m/Y" }}
           </span>
         </div>
 
         {# FIRMA + LOGOS INFERIORES #}
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin-top:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:24px; ">
           <div style="text-align:center; flex:1;">
             <img src="{% static 'lms/firma_maria_alejandra.png' %}"
                  alt="Firma María Alejandra Torcianti"
-                 style="height:150px; object-fit:contain; margin-bottom:4px;">
+                 style="height:180px; object-fit:contain; ">
             <div style="border-top:1px solid #000; width:80%; margin:0 auto 4px;"></div>
             <div style="font-size:13px; font-weight:600;">María Alejandra Torcianti</div>
             <div style="font-size:12px;">Facilitadora</div>
           </div>
 
           <div style="flex:1; display:flex; justify-content:flex-end; gap:20px; align-items:center;">
-            <img src="{% static 'lms/logo_fapya.png' %}" alt="Infinito" style="height:150px; object-fit:contain;">
-            <img src="{% static 'lms/logo_aceyba.png' %}" alt="ACYEBA" style="height:150px; object-fit:contain;">
+            <!-- <img src="{% static 'lms/logo_fapya.png' %}" alt="Infinito" style="height:150px; object-fit:contain;"> -->
+            <img src="{% static 'lms/logo_aceyba.png' %}" alt="ACYEBA" style="height:150px; object-fit:contain; margin-right: 30px;">
           </div>
         </div>
 
         {# BOTÓN IMPRIMIR / GUARDAR PDF #}
-        <div style="margin-top:40px; text-align:center;">
+        <div style="margin-top:10px; text-align:center;">
           <button class="no-print" type="button"
                   onclick="window.print()"
                   style="
