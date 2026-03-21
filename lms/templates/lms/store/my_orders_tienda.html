@@ -1,0 +1,67 @@
+% extends 'lms/base.html' %}
+{% block title %}Mis pedidos — Tienda Infinito{% endblock %}
+{% block content %}
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+  <h1 style="margin:0">📦 Mis pedidos</h1>
+  <a href="{% url 'lms:store' %}" class="btn-outline">← Ir a la tienda</a>
+</div>
+
+{% if orders %}
+  {% for order in orders %}
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+        <div>
+          <span style="font-weight:800; font-size:1rem">Pedido #{{ order.id }}</span>
+          <span style="margin-left:10px; font-size:13px; color:#888">{{ order.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center">
+          {# Badge de estado #}
+          {% if order.status == 'delivered' %}
+            <span style="background:#e7f9ed; color:#0b6e31; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">✓ Entregado</span>
+          {% elif order.status == 'shipped' %}
+            <span style="background:#eef6ff; color:#0b3b91; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">🚚 Enviado</span>
+          {% elif order.status == 'paid' %}
+            <span style="background:#e7f9ed; color:#0b6e31; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">✓ Pagado</span>
+          {% elif order.status == 'cancelled' %}
+            <span style="background:#ffeff1; color:#b30b2a; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">✗ Cancelado</span>
+          {% else %}
+            <span style="background:#fff8e1; color:#795548; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">⏳ Pendiente</span>
+          {% endif %}
+          <span style="font-weight:800; color:var(--color-principal)">$ {{ order.total_ars }}</span>
+        </div>
+      </div>
+
+      {# Items #}
+      <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:10px">
+        {% for item in order.items.all %}
+          <div style="display:flex; align-items:center; gap:8px; background:#f9fafb; border-radius:8px; padding:6px 10px; font-size:13px">
+            <img src="{{ item.product.image_display|default:'https://via.placeholder.com/32' }}"
+                 style="width:32px; height:32px; object-fit:cover; border-radius:4px">
+            <span>{{ item.product.name }} <strong>×{{ item.qty }}</strong></span>
+          </div>
+        {% endfor %}
+      </div>
+
+      {# Tracking #}
+      {% if order.tracking_number %}
+        <div style="margin-top:10px; font-size:13px; color:#555">
+          🔍 Seguimiento: <strong>{{ order.tracking_number }}</strong>
+          {% if order.tracking_url %}
+            — <a href="{{ order.tracking_url }}" target="_blank" style="color:var(--color-principal)">Rastrear envío →</a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <div style="margin-top:8px; font-size:13px; color:#888">
+        📍 {{ order.address }}, {{ order.city }}, {{ order.province }} ({{ order.postal_code }})
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card" style="text-align:center; padding:48px">
+    <p style="color:#888">Todavía no realizaste ningún pedido.</p>
+    <a href="{% url 'lms:store' %}" class="btn" style="margin-top:12px">Ir a la tienda</a>
+  </div>
+{% endif %}
+{% endblock %}

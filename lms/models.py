@@ -256,3 +256,202 @@ class Entitlement(TimeStamped):
 
     class Meta:
         unique_together = ('user', 'stage')
+
+# =========================
+# TIENDA DE PRODUCTOS
+# =========================
+
+class ProductCategory(TimeStamped):
+    name = models.CharField("Nombre", max_length=100)
+    slug = models.SlugField(unique=True)
+
+    class Meta:
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+
+    def __str__(self):
+        return self.name
+
+
+class Product(TimeStamped):
+    name        = models.CharField("Nombre", max_length=200)
+    slug        = models.SlugField(unique=True)
+    description = models.TextField("Descripción", blank=True)
+    price_ars   = models.DecimalField("Precio (ARS)", max_digits=12, decimal_places=2)
+    stock       = models.PositiveIntegerField("Stock", default=0)
+    image       = models.ImageField("Imagen", upload_to="products/", null=True, blank=True)
+    image_url   = models.URLField("URL de imagen (alternativa)", blank=True)
+    category    = models.ForeignKey(
+        ProductCategory, related_name="products",
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
+    is_active   = models.BooleanField("Activo", default=True)
+
+    # Datos logísticos para cálculo de envío
+    weight_kg   = models.DecimalField("Peso (kg)", max_digits=6, decimal_places=3, default=0)
+    width_cm    = models.DecimalField("Ancho (cm)", max_digits=6, decimal_places=1, default=0)
+    height_cm   = models.DecimalField("Alto (cm)",  max_digits=6, decimal_places=1, default=0)
+    depth_cm    = models.DecimalField("Prof. (cm)", max_digits=6, decimal_places=1, default=0)
+
+    class Meta:
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def image_display(self):
+        """Devuelve URL de imagen (archivo o URL externa)."""
+        try:
+            if self.image and hasattr(self.image, "url"):
+                return self.image.url
+        except Exception:
+            pass
+        return self.image_url or ""
+
+    @property
+    def volumetric_weight(self):
+        """Peso volumétrico = (L×A×P) / 5000 — estándar courier."""
+        try:
+            vol = (self.width_cm * self.height_cm * self.depth_cm) / 5000
+            return float(vol)
+        except Exception:
+            return 0.0
+
+    @property
+    def billable_weight(self):
+        return max(float(self.weight_kg), self.volumetric_weight)
+
+
+class ShippingZone(TimeStamped):
+    name        = models.CharField("Zona", max_length=100)
+    multiplier  = models.DecimalField("Multiplicador", max_digits=4, decimal_places=2, default=1)
+    postal_codes = models.TextField(
+        "Códigos postales (separados por coma)",
+        blank=True,
+        help_text="Ej: 1000,1001,1002,1100"
+    )
+
+    class Meta:
+        verbose_name = "Zona de envío"
+        verbose_name_plural = "Zonas de envío"
+        ordering = ["multiplier"]
+
+    def __str__(self):
+        return f"{self.name} (x{self.multiplier})"
+
+    def codes_list(self):
+        return [c.strip() for c in self.postal_codes.split(",") if c.strip()]
+
+
+class ShippingConfig(TimeStamped):
+    """Singleton — siempre hay una sola fila (id=1)."""
+    base_rate_ars   = models.DecimalField("Tarifa base (ARS)", max_digits=10, decimal_places=2, default=500)
+    per_kg_ars      = models.DecimalField("$ por kg", max_digits=8, decimal_places=2, default=150)
+    free_over_ars   = models.DecimalField("Envío gratis desde (ARS)", max_digits=12, decimal_places=2, default=15000)
+    # Proveedor externo (para integración futura)
+    provider_name   = models.CharField("Proveedor", max_length=100, blank=True, default="Andreani")
+    provider_url    = models.URLField("URL del proveedor", blank=True)
+    provider_api_key = models.CharField("API Key", max_length=255, blank=True)
+    provider_active = models.BooleanField("Integración activa", default=False)
+
+    class Meta:
+        verbose_name = "Configuración de envíos"
+
+    def __str__(self):
+        return "Configuración de envíos"
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+
+    def calc_shipping(self, cart_items, postal_code: str) -> int:
+        """
+        cart_items: lista de dicts con {'product': Product, 'qty': int}
+        Retorna costo en ARS (int). 0 = envío gratis.
+        """
+        subtotal = sum(float(i["product"].price_ars) * i["qty"] for i in cart_items)
+        if subtotal >= float(self.free_over_ars):
+            return 0
+
+        # Zona según código postal
+        zone = None
+        for z in ShippingZone.objects.all():
+            if postal_code in z.codes_list():
+                zone = z
+                break
+        # Si no matchea ninguna zona → zona "Interior" (la de mayor multiplicador)
+        if zone is None:
+            zone = ShippingZone.objects.order_by("-multiplier").first()
+
+        multiplier = float(zone.multiplier) if zone else 2.0
+
+        total_bw = sum(i["product"].billable_weight * i["qty"] for i in cart_items)
+        cost = (float(self.base_rate_ars) + total_bw * float(self.per_kg_ars)) * multiplier
+        return max(0, round(cost))
+
+
+class StoreOrder(TimeStamped):
+    STATUS = (
+        ("pending",    "Pendiente"),
+        ("paid",       "Pagado"),
+        ("shipped",    "Enviado"),
+        ("delivered",  "Entregado"),
+        ("cancelled",  "Cancelado"),
+    )
+    PAYMENT_METHODS = (
+        ("mp",       "Mercado Pago"),
+        ("transfer", "Transferencia"),
+        ("cash",     "Efectivo"),
+    )
+
+    user            = models.ForeignKey(User, related_name="store_orders", on_delete=models.CASCADE)
+    status          = models.CharField(max_length=12, choices=STATUS, default="pending")
+    payment_method  = models.CharField(max_length=12, choices=PAYMENT_METHODS, blank=True)
+
+    # Datos de entrega
+    recipient_name  = models.CharField("Destinatario", max_length=200)
+    email           = models.EmailField("Email")
+    phone           = models.CharField("Teléfono", max_length=30, blank=True)
+    address         = models.CharField("Dirección", max_length=300)
+    city            = models.CharField("Ciudad", max_length=100)
+    province        = models.CharField("Provincia", max_length=100)
+    postal_code     = models.CharField("Código postal", max_length=12)
+
+    # Montos
+    subtotal_ars    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    shipping_ars    = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_ars       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Tracking
+    tracking_number = models.CharField("Número de seguimiento", max_length=100, blank=True)
+    tracking_url    = models.URLField("URL de seguimiento", blank=True)
+    notes           = models.TextField("Notas internas", blank=True)
+
+    # Comprobante transferencia
+    transfer_receipt = models.FileField(upload_to="store_receipts/", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Pedido tienda"
+        verbose_name_plural = "Pedidos tienda"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Pedido #{self.id} — {self.recipient_name} ({self.status})"
+
+
+class StoreOrderItem(TimeStamped):
+    order       = models.ForeignKey(StoreOrder, related_name="items", on_delete=models.CASCADE)
+    product     = models.ForeignKey(Product, related_name="order_items", on_delete=models.PROTECT)
+    qty         = models.PositiveIntegerField(default=1)
+    unit_price  = models.DecimalField(max_digits=12, decimal_places=2)  # precio al momento de compra
+
+    def __str__(self):
+        return f"{self.qty}x {self.product.name}"
+
+    @property
+    def subtotal(self):
+        return self.unit_price * self.qty

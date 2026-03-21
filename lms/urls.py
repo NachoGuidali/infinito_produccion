@@ -1,6 +1,7 @@
 from django.urls import path
 from django.views.generic import RedirectView
 from . import views
+from . import views_store
 
 app_name = "lms"
 
@@ -56,8 +57,9 @@ urlpatterns = [
 
     # Perfil
     path("perfil/", views.profile, name="profile"),
+    path("mis-pedidos/", views_store.store_my_orders, name="store_my_orders"),
 
-    # Panel admin “ligero” (ruta principal)
+    # Panel admin "ligero" (ruta principal)
     path("panel-admin/", views.admin_panel, name="admin_panel"),
     path(
         "panel-admin/pedido/<int:purchase_id>/estado/",
@@ -89,6 +91,48 @@ urlpatterns = [
         "panel/usuario/<int:user_id>/",
         RedirectView.as_view(pattern_name="lms:admin_user_detail", permanent=False),
     ),
+
+    # ─── TIENDA DE PRODUCTOS ──────────────────────────────────────
+    path("tienda/", views_store.store, name="store"),
+    path("tienda/producto/<slug:slug>/", views_store.store_product_detail, name="store_product_detail"),
+
+    # Carrito tienda
+    path("tienda/carrito/", views_store.store_cart, name="store_cart"),
+    path("tienda/carrito/agregar/<int:product_id>/", views_store.store_cart_add, name="store_cart_add"),
+    path("tienda/carrito/quitar/<str:key>/", views_store.store_cart_remove, name="store_cart_remove"),
+    path("tienda/carrito/actualizar/<str:key>/", views_store.store_cart_update, name="store_cart_update"),
+    path("tienda/envio/calcular/", views_store.store_shipping_calc, name="store_shipping_calc"),
+
+    # Checkout tienda
+    path("tienda/checkout/", views_store.store_checkout, name="store_checkout"),
+    path("tienda/pedido/<int:order_id>/confirmado/", views_store.store_order_success, name="store_order_success"),
+
+    # ─── ADMIN TIENDA ─────────────────────────────────────────────
+    path("panel-admin/tienda/", views_store.store_admin, name="store_admin"),
+
+    # Productos admin
+    path("panel-admin/tienda/producto/nuevo/", views_store.store_admin_product_create, name="store_admin_product_create"),
+    path("panel-admin/tienda/producto/<int:product_id>/editar/", views_store.store_admin_product_edit, name="store_admin_product_edit"),
+    path("panel-admin/tienda/producto/<int:product_id>/eliminar/", views_store.store_admin_product_delete, name="store_admin_product_delete"),
+    path("panel-admin/tienda/productos/importar/", views_store.store_admin_product_import, name="store_admin_product_import"),
+    path("panel-admin/tienda/productos/plantilla/", views_store.store_admin_product_import_template, name="store_admin_product_import_template"),
+
+    # Categorías admin
+    path("panel-admin/tienda/categoria/guardar/", views_store.store_admin_category_save, name="store_admin_category_save"),
+    path("panel-admin/tienda/categoria/<int:cat_id>/eliminar/", views_store.store_admin_category_delete, name="store_admin_category_delete"),
+
+    # Pedidos admin
+    path("panel-admin/tienda/pedido/<int:order_id>/", views_store.store_admin_order_detail, name="store_admin_order_detail"),
+    path("panel-admin/tienda/pedido/<int:order_id>/actualizar/", views_store.store_admin_order_update, name="store_admin_order_update"),
+    path("panel-admin/tienda/pedido/<int:order_id>/eliminar/", views_store.store_admin_order_delete, name="store_admin_order_delete"),
+    path("panel-admin/tienda/pedidos/nuevos/", views_store.store_admin_new_orders, name="store_admin_new_orders"),
+
+    # Envíos admin
+    path("panel-admin/tienda/envios/guardar/", views_store.store_admin_shipping_save, name="store_admin_shipping_save"),
+    path("panel-admin/tienda/zona/guardar/", views_store.store_admin_zone_save, name="store_admin_zone_save"),
+    path("panel-admin/tienda/zona/<int:zone_id>/eliminar/", views_store.store_admin_zone_delete, name="store_admin_zone_delete"),
+    path("panel-admin/tienda/zonas/importar/", views_store.store_admin_zone_import, name="store_admin_zone_import"),
+    path("panel-admin/tienda/zonas/plantilla/", views_store.store_admin_zone_import_template, name="store_admin_zone_import_template"),
 
     # Logout robusto
     path("salir/", views.logout_view, name="logout"),

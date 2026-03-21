@@ -25,7 +25,12 @@
   .note{background:#fff7ff;border:1px dashed #f2b7e8;border-radius:12px;padding:8px 10px;margin-top:6px}
 </style>
 
-<h1 style="margin:0 0 8px">Panel administrativo</h1>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+  <h1 style="margin:0">Panel administrativo</h1>
+  <a href="{% url 'lms:store_admin' %}" class="btn" style="gap:6px;display:inline-flex;align-items:center">
+    🛍️ Panel tienda
+  </a>
+</div>
 
 {# KPIs desde summary.* que trae la vista #}
 <div class="kpis">

@@ -1,0 +1,130 @@
+{% extends 'lms/base.html' %}
+{% block title %}Tienda — Infinito Capacitaciones{% endblock %}
+{% block content %}
+
+{# ── Cabecera ── #}
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px">
+  <div>
+    <h1 style="margin:0">🛍️ Tienda</h1>
+    <p style="margin:4px 0 0; color:#888">Productos y materiales para tu formación</p>
+  </div>
+  <a href="{% url 'lms:store_cart' %}" class="btn" style="position:relative">
+    🛒 Mi carrito
+    {% if cart_count > 0 %}
+      <span style="
+        position:absolute; top:-8px; right:-8px;
+        background:white; color:var(--color-principal);
+        border:2px solid var(--color-principal);
+        border-radius:999px; width:22px; height:22px;
+        display:flex; align-items:center; justify-content:center;
+        font-size:11px; font-weight:800;">{{ cart_count }}</span>
+    {% endif %}
+  </a>
+</div>
+
+{# ── Filtros ── #}
+<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px">
+  <a href="{% url 'lms:store' %}"
+     class="{% if not selected_cat %}btn{% else %}btn-outline{% endif %}">
+    Todo
+  </a>
+  {% for cat in categories %}
+    <a href="{% url 'lms:store' %}?cat={{ cat.slug }}"
+       class="{% if selected_cat == cat.slug %}btn{% else %}btn-outline{% endif %}">
+      {{ cat.name }}
+    </a>
+  {% endfor %}
+
+  {# Buscador #}
+  <form method="get" action="{% url 'lms:store' %}" style="margin-left:auto; display:flex; gap:8px">
+    {% if selected_cat %}<input type="hidden" name="cat" value="{{ selected_cat }}">{% endif %}
+    <input type="text" name="q" value="{{ search_q }}" placeholder="Buscar producto..."
+           style="padding:8px 14px; border-radius:999px; border:2px solid #e9e9e9; font-size:14px; outline:none; width:220px">
+    <button type="submit" class="btn">Buscar</button>
+  </form>
+</div>
+
+{# ── Grid de productos ── #}
+{% if page_obj.object_list %}
+  <div class="grid grid-3">
+    {% for product in page_obj %}
+      <article class="card" style="display:flex; flex-direction:column; gap:12px">
+
+        <a href="{% url 'lms:store_product_detail' product.slug %}">
+          <img src="{{ product.image_display|default:'https://via.placeholder.com/640x400?text=Producto' }}"
+               alt="{{ product.name }}"
+               style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:1px solid #e9e9e9">
+        </a>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px">
+          <h3 style="margin:0; font-size:1rem">
+            <a href="{% url 'lms:store_product_detail' product.slug %}" style="color:inherit">{{ product.name }}</a>
+          </h3>
+          {% if product.category %}
+            <span style="white-space:nowrap; font-size:12px; font-weight:700;
+                         padding:4px 10px; border-radius:999px;
+                         background:#f7e7fb; color:#8a2b8f; border:1px solid #ecd9f0;">
+              {{ product.category.name }}
+            </span>
+          {% endif %}
+        </div>
+
+        <p style="margin:0; color:#666; font-size:14px; flex:1">
+          {{ product.description|truncatechars:90 }}
+        </p>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
+          <span style="font-weight:800; font-size:1.15rem; color:var(--color-principal)">
+            $ {{ product.price_ars }}
+          </span>
+          {% if product.stock > 0 %}
+            <span style="font-size:12px; color:#888">Stock: {{ product.stock }}</span>
+          {% else %}
+            <span style="font-size:12px; color:#e53935; font-weight:700">Sin stock</span>
+          {% endif %}
+        </div>
+
+        <div style="display:flex; gap:8px">
+          <a href="{% url 'lms:store_product_detail' product.slug %}" class="btn-outline" style="flex:1; text-align:center; padding:8px">
+            Ver detalle
+          </a>
+          {% if product.stock > 0 %}
+            <form method="post" action="{% url 'lms:store_cart_add' product.id %}" style="flex:1">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn" style="width:100%">+ Carrito</button>
+            </form>
+          {% else %}
+            <button class="btn" disabled style="flex:1; opacity:.5; cursor:not-allowed">Sin stock</button>
+          {% endif %}
+        </div>
+
+      </article>
+    {% endfor %}
+  </div>
+
+  {# ── Paginación ── #}
+  {% if page_obj.has_other_pages %}
+    <div style="display:flex; justify-content:center; gap:8px; margin-top:28px">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if selected_cat %}&cat={{ selected_cat }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn-outline">← Anterior</a>
+      {% endif %}
+      <span style="padding:8px 16px; font-weight:700; color:#888">
+        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+      </span>
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if selected_cat %}&cat={{ selected_cat }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn-outline">Siguiente →</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="card" style="text-align:center; padding:48px">
+    <p style="color:#888; font-size:1.1rem">No se encontraron productos{% if search_q %} para "{{ search_q }}"{% endif %}.</p>
+    <a href="{% url 'lms:store' %}" class="btn" style="margin-top:12px">Ver todos los productos</a>
+  </div>
+{% endif %}
+
+{% endblock %}

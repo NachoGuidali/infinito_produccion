@@ -1,0 +1,45 @@
+{% extends 'lms/base.html' %}
+{% block title %}¡Pedido confirmado! — Tienda Infinito{% endblock %}
+{% block content %}
+<div style="max-width:560px; margin:40px auto; text-align:center">
+  <div style="font-size:4rem; margin-bottom:16px">🎉</div>
+  <h1 style="color:var(--color-principal)">¡Pedido confirmado!</h1>
+  <p style="color:#555; font-size:1.05rem; line-height:1.6">
+    Tu pedido <strong>#{{ order.id }}</strong> fue registrado correctamente.<br>
+    Te enviamos un email a <strong>{{ order.email }}</strong> con los detalles.
+  </p>
+
+  <div class="card" style="text-align:left; margin:24px 0">
+    <h3 style="margin:0 0 14px">Resumen</h3>
+    {% for item in order.items.all %}
+      <div style="display:flex; justify-content:space-between; font-size:14px; padding:6px 0; border-bottom:1px solid #f0f0f0">
+        <span>{{ item.product.name }} ×{{ item.qty }}</span>
+        <strong>$ {{ item.subtotal }}</strong>
+      </div>
+    {% endfor %}
+    <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:14px">
+      <span>Envío</span>
+      <span>{% if order.shipping_ars == 0 %}Gratis{% else %}$ {{ order.shipping_ars }}{% endif %}</span>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-weight:800; font-size:1.1rem; margin-top:8px; padding-top:8px; border-top:2px solid #f0f0f0">
+      <span>Total</span>
+      <span style="color:var(--color-principal)">$ {{ order.total_ars }}</span>
+    </div>
+  </div>
+
+  <div class="card" style="background:#f9fafb; text-align:left; font-size:14px; color:#555; line-height:1.7">
+    <strong style="color:#333">📦 Entrega</strong><br>
+    {{ order.address }}, {{ order.city }}, {{ order.province }} ({{ order.postal_code }})
+    {% if order.payment_method == 'transfer' %}
+      <div style="margin-top:8px; color:#b07a00; font-weight:600">
+        ⏳ Tu pago está pendiente de verificación. Te avisaremos por email cuando se confirme.
+      </div>
+    {% endif %}
+  </div>
+
+  <div style="display:flex; gap:12px; justify-content:center; margin-top:24px">
+    <a href="{% url 'lms:store' %}" class="btn">Seguir comprando</a>
+    <a href="{% url 'lms:store_my_orders' %}" class="btn-outline">Mis pedidos</a>
+  </div>
+</div>
+{% endblock %}

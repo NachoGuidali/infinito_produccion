@@ -1,0 +1,109 @@
+{% extends 'lms/base.html' %}
+{% block title %}{{ product.name }} — Tienda Infinito{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px">
+  <a href="{% url 'lms:store' %}" style="color:var(--color-principal); font-weight:600">← Volver a la tienda</a>
+</div>
+
+<div class="grid grid-2" style="gap:32px; align-items:start">
+
+  {# ── Imagen ── #}
+  <div>
+    <img src="{{ product.image_display|default:'https://via.placeholder.com/640x480?text=Producto' }}"
+         alt="{{ product.name }}"
+         style="width:100%; border-radius:16px; border:1px solid #e9e9e9; object-fit:cover; aspect-ratio:4/3">
+  </div>
+
+  {# ── Info ── #}
+  <div class="card" style="display:flex; flex-direction:column; gap:16px">
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">
+      <h1 style="margin:0; font-size:1.6rem">{{ product.name }}</h1>
+      {% if product.category %}
+        <span style="white-space:nowrap; font-size:12px; font-weight:700;
+                     padding:5px 12px; border-radius:999px;
+                     background:#f7e7fb; color:#8a2b8f; border:1px solid #ecd9f0;">
+          {{ product.category.name }}
+        </span>
+      {% endif %}
+    </div>
+
+    <div style="font-size:2rem; font-weight:800; color:var(--color-principal)">
+      $ {{ product.price_ars }}
+    </div>
+
+    <p style="margin:0; color:#444; line-height:1.6">{{ product.description }}</p>
+
+    {# Stock #}
+    <div style="display:flex; align-items:center; gap:10px">
+      {% if product.stock > 0 %}
+        <span style="background:#e7f9ed; color:#0b6e31; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">
+          ✓ En stock ({{ product.stock }} disponibles)
+        </span>
+      {% else %}
+        <span style="background:#ffeff1; color:#b30b2a; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">
+          ✗ Sin stock
+        </span>
+      {% endif %}
+    </div>
+
+    {# Datos logísticos #}
+    {% if product.weight_kg %}
+      <div style="background:#f9fafb; border-radius:10px; padding:12px; font-size:13px; color:#666">
+        <strong style="color:#444">Datos de envío:</strong>
+        <span style="margin-left:8px">Peso: {{ product.weight_kg }} kg</span>
+        {% if product.width_cm %}
+          · Medidas: {{ product.width_cm }}×{{ product.height_cm }}×{{ product.depth_cm }} cm
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# Botón agregar #}
+    {% if product.stock > 0 %}
+      <form method="post" action="{% url 'lms:store_cart_add' product.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn" style="width:100%; padding:14px; font-size:1rem">
+          🛒 Agregar al carrito
+        </button>
+      </form>
+    {% else %}
+      <button class="btn" disabled style="width:100%; padding:14px; opacity:.5; cursor:not-allowed">
+        Sin stock disponible
+      </button>
+    {% endif %}
+
+    <a href="{% url 'lms:store_cart' %}" class="btn-outline" style="text-align:center; padding:10px">
+      Ver carrito →
+    </a>
+
+  </div>
+</div>
+
+{# ── Productos relacionados ── #}
+{% if related %}
+  <div style="margin-top:48px">
+    <h2 style="margin-bottom:16px">Productos relacionados</h2>
+    <div class="grid grid-3">
+      {% for p in related %}
+        <article class="card" style="display:flex; flex-direction:column; gap:10px">
+          <a href="{% url 'lms:store_product_detail' p.slug %}">
+            <img src="{{ p.image_display|default:'https://via.placeholder.com/400x300?text=Producto' }}"
+                 alt="{{ p.name }}"
+                 style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:1px solid #e9e9e9">
+          </a>
+          <h3 style="margin:0; font-size:.95rem">
+            <a href="{% url 'lms:store_product_detail' p.slug %}" style="color:inherit">{{ p.name }}</a>
+          </h3>
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <span style="font-weight:800; color:var(--color-principal)">$ {{ p.price_ars }}</span>
+            <a href="{% url 'lms:store_product_detail' p.slug %}" class="btn-outline" style="padding:5px 12px; font-size:13px">Ver</a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}

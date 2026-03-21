@@ -1,0 +1,408 @@
+{% extends 'lms/base.html' %}
+{% block title %}Admin Tienda — Infinito{% endblock %}
+{% block content %}
+
+<style>
+  /* Notificaciones */
+  #notif-toast{display:none;position:fixed;bottom:24px;right:24px;z-index:9999;
+    background:#1a1a2e;color:white;border-radius:16px;padding:16px 20px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.25);max-width:340px;cursor:pointer;
+    animation:slideIn .3s ease}
+  #notif-badge{display:none;position:fixed;bottom:24px;right:24px;z-index:9998;
+    background:var(--color-principal);color:white;border-radius:999px;
+    padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer;
+    box-shadow:0 4px 16px rgba(0,0,0,0.2)}
+  @keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+</style>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px">
+  <div>
+    <h1 style="margin:0">⚙️ Panel — Tienda</h1>
+    <p style="margin:4px 0 0; color:#888; font-size:14px">Gestión de productos, pedidos y envíos</p>
+  </div>
+  <div style="display:flex; gap:10px">
+    <a href="{% url 'lms:admin_panel' %}" class="btn-outline">Panel LMS</a>
+    <a href="{% url 'lms:store' %}" class="btn secondary" style="background:var(--color-principal)">Ver tienda →</a>
+  </div>
+</div>
+
+{# ── Tabs ── #}
+<div style="display:flex; gap:4px; background:white; border-radius:12px; padding:6px; width:fit-content; margin-bottom:24px; border:1px solid #e9e9e9">
+  {% for t, label in tab_items %}
+    <a href="?tab={{ t }}"
+       style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:14px; text-decoration:none;
+              background:{% if tab == t %}var(--color-principal){% else %}transparent{% endif %};
+              color:{% if tab == t %}white{% else %}var(--color-texto){% endif %}">
+      {{ label }}
+    </a>
+  {% endfor %}
+</div>
+
+{# ──────── TAB: PRODUCTOS ──────── #}
+{% if tab == 'products' or not tab %}
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px">
+    <h2 style="margin:0">Productos ({{ products|length }})</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <form method="post" action="{% url 'lms:store_admin_product_import' %}" enctype="multipart/form-data"
+            style="display:flex; gap:6px; align-items:center">
+        {% csrf_token %}
+        <label style="font-size:13px; font-weight:600; color:#555">📥 Importar Excel:</label>
+        <input type="file" name="excel_file" accept=".xlsx,.xls" required style="font-size:13px; padding:4px">
+        <button type="submit" class="btn-outline" style="padding:6px 14px; font-size:13px">Importar</button>
+        <a href="{% url 'lms:store_admin_product_import_template' %}" class="btn-outline"
+           style="padding:6px 14px; font-size:13px; color:#666">⬇ Plantilla</a>
+      </form>
+      <a href="{% url 'lms:store_admin_product_create' %}" class="btn">+ Nuevo producto</a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div style="margin-bottom:12px; padding:10px 16px; border-radius:10px; font-size:14px;
+                  background:{% if msg.tags == 'error' %}#ffeff1{% else %}#e7f9ed{% endif %};
+                  color:{% if msg.tags == 'error' %}#b30b2a{% else %}#0b6e31{% endif %}">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="grid grid-3">
+    {% for p in products %}
+      <div class="card" style="display:flex; flex-direction:column; gap:10px; {% if not p.is_active %}opacity:.6{% endif %}">
+        <img src="{{ p.image_display|default:'https://via.placeholder.com/400x200?text=Sin+imagen' }}"
+             style="width:100%; height:120px; object-fit:cover; border-radius:8px; border:1px solid #e9e9e9">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px">
+          <strong style="font-size:.95rem">{{ p.name }}</strong>
+          {% if p.category %}<span style="font-size:11px; background:#f7e7fb; color:#8a2b8f; border-radius:999px; padding:2px 8px">{{ p.category.name }}</span>{% endif %}
+        </div>
+        <div style="font-size:13px; color:#888">
+          $ {{ p.price_ars }} · Stock: {{ p.stock }} · {% if p.is_active %}✅ Activo{% else %}⏸️ Inactivo{% endif %}
+        </div>
+        <div style="display:flex; gap:8px">
+          <a href="{% url 'lms:store_admin_product_edit' p.id %}" class="btn-outline" style="flex:1; text-align:center; padding:6px; font-size:13px">✏️ Editar</a>
+          <form method="post" action="{% url 'lms:store_admin_product_delete' p.id %}"
+                onsubmit="return confirm('¿Eliminar {{ p.name }}?')" style="flex:1">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline" style="width:100%; padding:6px; font-size:13px; color:#e53935; border-color:#e53935">🗑️ Eliminar</button>
+          </form>
+        </div>
+      </div>
+    {% empty %}
+      <p style="color:#888; grid-column:1/-1">No hay productos cargados aún.</p>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# ──────── TAB: CATEGORÍAS ──────── #}
+{% if tab == 'categories' %}
+  <div class="grid grid-2" style="gap:24px; align-items:start">
+    <div>
+      <h2 style="margin:0 0 14px">Categorías existentes</h2>
+      {% for cat in categories %}
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:10px 14px">
+          <span style="font-weight:600">{{ cat.name }}</span>
+          <div style="display:flex; gap:8px">
+            <form method="post" action="{% url 'lms:store_admin_category_save' %}">
+              {% csrf_token %}
+              <input type="hidden" name="cat_id" value="{{ cat.id }}">
+              <input type="text" name="name" value="{{ cat.name }}"
+                     style="padding:5px 10px; border-radius:8px; border:1.5px solid #e9e9e9; font-size:13px; width:130px">
+              <button type="submit" class="btn" style="padding:5px 12px; font-size:12px; margin-left:4px">Guardar</button>
+            </form>
+            <form method="post" action="{% url 'lms:store_admin_category_delete' cat.id %}"
+                  onsubmit="return confirm('¿Eliminar categoría?')">
+              {% csrf_token %}
+              <button type="submit" class="btn-outline" style="padding:5px 10px; font-size:12px; color:#e53935; border-color:#e53935">✕</button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <p style="color:#888">Sin categorías aún.</p>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <h2 style="margin:0 0 14px; font-size:1rem">Nueva categoría</h2>
+      <form method="post" action="{% url 'lms:store_admin_category_save' %}" style="display:flex; gap:8px">
+        {% csrf_token %}
+        <input type="text" name="name" placeholder="Nombre de la categoría" required
+               style="flex:1; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        <button type="submit" class="btn">Crear</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+{# ──────── TAB: PEDIDOS ──────── #}
+{% if tab == 'orders' %}
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px">
+    <h2 style="margin:0">Pedidos</h2>
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      {% for val, label in order_statuses %}
+        <a href="?tab=orders&order_status={{ val }}"
+           class="{% if status_filter == val %}btn{% else %}btn-outline{% endif %}"
+           style="padding:6px 14px; font-size:13px">{{ label }}</a>
+      {% endfor %}
+      <a href="?tab=orders" class="{% if not status_filter %}btn{% else %}btn-outline{% endif %}"
+         style="padding:6px 14px; font-size:13px">Todos</a>
+    </div>
+  </div>
+
+  {% if orders %}
+    <div class="card" style="overflow:hidden; padding:0">
+      <table style="width:100%; border-collapse:collapse; font-size:14px">
+        <thead>
+          <tr style="background:#f9fafb; border-bottom:2px solid #e9e9e9">
+            <th style="padding:10px 14px; text-align:left">#</th>
+            <th style="padding:10px 14px; text-align:left">Cliente</th>
+            <th style="padding:10px 14px; text-align:left">Fecha</th>
+            <th style="padding:10px 14px; text-align:right">Total</th>
+            <th style="padding:10px 14px; text-align:center">Estado</th>
+            <th style="padding:10px 14px; text-align:center">Cambiar estado</th>
+            <th style="padding:10px 14px; text-align:center">Comprobante</th>
+            <th style="padding:10px 14px; text-align:center">Detalle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+            <tr style="border-bottom:1px solid #f0f0f0">
+              <td style="padding:10px 14px; font-weight:700">#{{ order.id }}</td>
+              <td style="padding:10px 14px">
+                <div style="font-weight:600">{{ order.recipient_name }}</div>
+                <div style="color:#888; font-size:12px">{{ order.email }}</div>
+              </td>
+              <td style="padding:10px 14px; color:#888">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+              <td style="padding:10px 14px; text-align:right; font-weight:800; color:var(--color-principal)">$ {{ order.total_ars }}</td>
+              <td style="padding:10px 14px; text-align:center">
+                <span style="border-radius:999px; padding:3px 12px; font-size:12px; font-weight:700;
+                  {% if order.status == 'delivered' or order.status == 'paid' %}background:#e7f9ed;color:#0b6e31
+                  {% elif order.status == 'shipped' %}background:#eef6ff;color:#0b3b91
+                  {% elif order.status == 'cancelled' %}background:#ffeff1;color:#b30b2a
+                  {% else %}background:#fff8e1;color:#795548{% endif %}">
+                  {{ order.get_status_display }}
+                </span>
+              </td>
+              <td style="padding:8px 14px; text-align:center">
+                <form method="post" action="{% url 'lms:store_admin_order_update' order.id %}"
+                      style="display:flex; gap:5px; align-items:center; justify-content:center">
+                  {% csrf_token %}
+                  <input type="hidden" name="tracking_number" value="{{ order.tracking_number }}">
+                  <input type="hidden" name="tracking_url" value="{{ order.tracking_url }}">
+                  <input type="hidden" name="next" value="{% url 'lms:store_admin' %}?tab=orders">
+                  <select name="status"
+                          style="padding:4px 8px; border-radius:8px; border:1.5px solid #e9e9e9; font-size:12px; cursor:pointer">
+                    {% for val, label in order_statuses %}
+                      <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn" style="padding:4px 10px; font-size:12px">✓</button>
+                </form>
+              </td>
+              <td style="padding:10px 14px; text-align:center">
+                {% if order.transfer_receipt %}
+                  <a href="{{ order.transfer_receipt.url }}" target="_blank"
+                     class="btn-outline" style="padding:4px 10px; font-size:12px; color:#0b3b91; border-color:#0b3b91">
+                    📄 Ver
+                  </a>
+                {% elif order.payment_method == 'transfer' %}
+                  <span style="font-size:12px; color:#e53935">Sin comprobante</span>
+                {% else %}
+                  <span style="font-size:12px; color:#ccc">—</span>
+                {% endif %}
+              </td>
+              <td style="padding:10px 14px; text-align:center">
+                <a href="{% url 'lms:store_admin_order_detail' order.id %}" class="btn-outline"
+                   style="padding:4px 12px; font-size:12px">Ver detalle</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color:#888">No hay pedidos para mostrar.</p>
+  {% endif %}
+{% endif %}
+
+{# ──────── TAB: ENVÍOS ──────── #}
+{% if tab == 'shipping' %}
+  <div class="grid grid-2" style="gap:24px; align-items:start">
+    <div class="card">
+      <h2 style="margin:0 0 16px; font-size:1.1rem">💰 Tarifas base</h2>
+      <form method="post" action="{% url 'lms:store_admin_shipping_save' %}" style="display:flex; flex-direction:column; gap:12px">
+        {% csrf_token %}
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Tarifa base (ARS)</label>
+          <input type="number" step="0.01" name="base_rate_ars" value="{{ config.base_rate_ars }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">$ por kg</label>
+          <input type="number" step="0.01" name="per_kg_ars" value="{{ config.per_kg_ars }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Envío gratis desde (ARS)</label>
+          <input type="number" step="0.01" name="free_over_ars" value="{{ config.free_over_ars }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div style="border-top:1px solid #f0f0f0; padding-top:12px">
+          <strong style="font-size:13px; color:var(--color-principal)">🔌 Proveedor externo</strong>
+          <p style="font-size:12px; color:#aaa; margin:4px 0 0">Opcional — sólo completar si usás integración con courier externo.</p>
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Proveedor</label>
+          <input type="text" name="provider_name" value="{{ config.provider_name }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">URL del servicio <span style="font-weight:400; color:#aaa">(opcional)</span></label>
+          <input type="text" name="provider_url" value="{{ config.provider_url }}" placeholder="https://..."
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">API Key <span style="font-weight:400; color:#aaa">(opcional)</span></label>
+          <input type="password" name="provider_api_key" value="{{ config.provider_api_key }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer">
+          <input type="checkbox" name="provider_active" {% if config.provider_active %}checked{% endif %}
+                 style="accent-color:var(--color-principal); width:18px; height:18px">
+          Integración activa
+        </label>
+        <button type="submit" class="btn" style="padding:11px">Guardar configuración ✓</button>
+      </form>
+    </div>
+
+    <div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px">
+        <h2 style="margin:0; font-size:1.1rem">🗺️ Zonas de envío</h2>
+        <form method="post" action="{% url 'lms:store_admin_zone_import' %}" enctype="multipart/form-data"
+              style="display:flex; gap:6px; align-items:center">
+          {% csrf_token %}
+          <input type="file" name="excel_file" accept=".xlsx,.xls" required style="font-size:12px; padding:3px">
+          <button type="submit" class="btn-outline" style="padding:5px 12px; font-size:12px">📥 Importar</button>
+          <a href="{% url 'lms:store_admin_zone_import_template' %}" class="btn-outline"
+             style="padding:5px 12px; font-size:12px; color:#666">⬇ Plantilla</a>
+        </form>
+      </div>
+
+      {% for zone in zones %}
+        <div class="card" style="margin-bottom:14px">
+          <form method="post" action="{% url 'lms:store_admin_zone_save' %}" style="display:flex; flex-direction:column; gap:10px">
+            {% csrf_token %}
+            <input type="hidden" name="zone_id" value="{{ zone.id }}">
+            <div class="grid grid-2" style="gap:10px">
+              <div>
+                <label style="font-size:12px; font-weight:700; color:#555">Nombre</label>
+                <input type="text" name="name" value="{{ zone.name }}" required
+                       style="width:100%; margin-top:3px; padding:7px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:12px; font-weight:700; color:#555">Multiplicador</label>
+                <input type="number" step="0.01" name="multiplier" value="{{ zone.multiplier }}" required
+                       style="width:100%; margin-top:3px; padding:7px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+              </div>
+            </div>
+            <div>
+              <label style="font-size:12px; font-weight:700; color:#555">Códigos postales (separados por coma)</label>
+              <textarea name="postal_codes" rows="2"
+                        style="width:100%; margin-top:3px; padding:7px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:12px; resize:vertical">{{ zone.postal_codes }}</textarea>
+            </div>
+            <button type="submit" class="btn" style="padding:7px">Guardar zona</button>
+          </form>
+          <form method="post" action="{% url 'lms:store_admin_zone_delete' zone.id %}"
+                onsubmit="return confirm('¿Eliminar zona {{ zone.name }}?')" style="margin-top:8px">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline"
+                    style="width:100%; padding:7px; color:#e53935; border-color:#e53935; font-size:13px">Eliminar</button>
+          </form>
+        </div>
+      {% empty %}
+        <p style="color:#888">No hay zonas configuradas.</p>
+      {% endfor %}
+
+      <div class="card" style="border:2px dashed #e9e9e9">
+        <h3 style="margin:0 0 12px; font-size:.95rem; color:#888">+ Nueva zona</h3>
+        <form method="post" action="{% url 'lms:store_admin_zone_save' %}" style="display:flex; flex-direction:column; gap:10px">
+          {% csrf_token %}
+          <div class="grid grid-2" style="gap:10px">
+            <input type="text" name="name" placeholder="Nombre (ej: GBA)" required
+                   style="padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+            <input type="number" step="0.01" name="multiplier" placeholder="Multiplicador" value="1"
+                   style="padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+          </div>
+          <textarea name="postal_codes" rows="2" placeholder="1000,1001,1002..."
+                    style="padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:12px; resize:vertical"></textarea>
+          <button type="submit" class="btn">Crear zona</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{# ── Toast de notificaciones ── #}
+<div id="notif-toast" onclick="irAPedidos()">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:24px">🛍️</span>
+    <div>
+      <div style="font-weight:700;font-size:15px" id="notif-title">Nuevo pedido</div>
+      <div style="font-size:13px;color:#ccc;margin-top:2px" id="notif-body"></div>
+    </div>
+    <button onclick="event.stopPropagation();cerrarToast()"
+            style="margin-left:auto;background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;padding:0 4px">✕</button>
+  </div>
+</div>
+<div id="notif-badge" onclick="irAPedidos()">
+  🛍️ <span id="notif-badge-count">0</span> pedido(s) nuevo(s)
+</div>
+
+<script>
+(function() {
+  const ENDPOINT = "{% url 'lms:store_admin_new_orders' %}";
+  const ORDERS_URL = "{% url 'lms:store_admin' %}?tab=orders";
+  const KEY = "lms_notif_since";
+  let lastCheck = parseInt(sessionStorage.getItem(KEY) || "0") || Math.floor(Date.now() / 1000);
+  let timer = null;
+  let pending = 0;
+
+  function irAPedidos() { window.location.href = ORDERS_URL; }
+  window.irAPedidos = irAPedidos;
+
+  function cerrarToast() {
+    document.getElementById("notif-toast").style.display = "none";
+    if (pending > 0) document.getElementById("notif-badge").style.display = "flex";
+  }
+  window.cerrarToast = cerrarToast;
+
+  function mostrarToast(count, orders) {
+    document.getElementById("notif-title").textContent = count === 1 ? "¡Nuevo pedido!" : `¡${count} pedidos nuevos!`;
+    if (orders.length > 0) {
+      const o = orders[0];
+      document.getElementById("notif-body").textContent = `${o.recipient} — $${o.total} (${o.payment})`;
+    }
+    document.getElementById("notif-badge").style.display = "none";
+    document.getElementById("notif-toast").style.display = "block";
+    clearTimeout(timer);
+    timer = setTimeout(cerrarToast, 8000);
+  }
+
+  function poll() {
+    fetch(`${ENDPOINT}?since=${lastCheck}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.count > 0) {
+          pending = data.count;
+          mostrarToast(data.count, data.orders);
+        }
+        lastCheck = Math.floor(Date.now() / 1000);
+        sessionStorage.setItem(KEY, lastCheck);
+      })
+      .catch(() => {});
+  }
+
+  setTimeout(poll, 3000);
+  setInterval(poll, 30000);
+})();
+</script>
+
+{% endblock %}

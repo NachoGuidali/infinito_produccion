@@ -1,0 +1,155 @@
+{% extends 'lms/base.html' %}
+{% block title %}Carrito de compras — Tienda Infinito{% endblock %}
+{% block content %}
+
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px">
+  <h1 style="margin:0">🛒 Carrito de compras</h1>
+  <a href="{% url 'lms:store' %}" style="color:var(--color-principal); font-weight:600">← Seguir comprando</a>
+</div>
+
+{% if items %}
+  <div class="grid" style="grid-template-columns:1fr 320px; gap:24px; align-items:start">
+
+    {# ── Lista de ítems ── #}
+    <div class="card" style="overflow:hidden; padding:0">
+
+      {# Encabezado #}
+      <div style="display:grid; grid-template-columns:1fr 120px 130px 80px;
+                  gap:12px; padding:12px 16px; background:#f9fafb;
+                  font-weight:700; font-size:14px; border-bottom:1px solid #e9e9e9">
+        <div>Producto</div>
+        <div style="text-align:center">Cantidad</div>
+        <div style="text-align:right">Subtotal</div>
+        <div></div>
+      </div>
+
+      {% for it in items %}
+        <div style="display:grid; grid-template-columns:1fr 120px 130px 80px;
+                    gap:12px; padding:14px 16px; align-items:center;
+                    border-bottom:1px solid #f0f0f0">
+
+          {# Producto #}
+          <div style="display:flex; gap:12px; align-items:center">
+            <img src="{{ it.product.image_display|default:'https://via.placeholder.com/80x80?text=P' }}"
+                 alt="{{ it.product.name }}"
+                 style="width:60px; height:60px; object-fit:cover; border-radius:8px; border:1px solid #e9e9e9; flex-shrink:0">
+            <div>
+              <div style="font-weight:700; font-size:.95rem">{{ it.product.name }}</div>
+              <div style="color:#888; font-size:13px">$ {{ it.product.price_ars }} c/u</div>
+            </div>
+          </div>
+
+          {# Cantidad #}
+          <form method="post" action="{% url 'lms:store_cart_update' it.key %}"
+                style="display:flex; align-items:center; gap:6px; justify-content:center">
+            {% csrf_token %}
+            <button type="submit" name="qty" value="{{ it.qty|add:'-1' }}"
+                    class="btn-outline" style="padding:2px 10px; font-size:1rem; line-height:1">−</button>
+            <span style="font-weight:700; min-width:24px; text-align:center">{{ it.qty }}</span>
+            <button type="submit" name="qty" value="{{ it.qty|add:'1' }}"
+                    class="btn-outline" style="padding:2px 10px; font-size:1rem; line-height:1">+</button>
+          </form>
+
+          {# Subtotal #}
+          <div style="text-align:right; font-weight:800; color:var(--color-principal)">
+            $ {{ it.subtotal }}
+          </div>
+
+          {# Quitar #}
+          <div style="text-align:right">
+            <form method="post" action="{% url 'lms:store_cart_remove' it.key %}">
+              {% csrf_token %}
+              <button type="submit" class="btn-outline"
+                      style="padding:5px 10px; color:#e53935; border-color:#e53935; font-size:13px">
+                Quitar
+              </button>
+            </form>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+
+    {# ── Resumen ── #}
+    <div style="display:flex; flex-direction:column; gap:16px">
+
+      <div class="card" style="display:flex; flex-direction:column; gap:14px">
+        <h2 style="margin:0; font-size:1.1rem">Resumen del pedido</h2>
+
+        <div style="display:flex; justify-content:space-between; font-size:15px">
+          <span>Subtotal ({{ cart_count }} ítem{{ cart_count|pluralize:"s" }})</span>
+          <strong>$ {{ total }}</strong>
+        </div>
+
+        {# Cálculo de envío en tiempo real #}
+        <div style="background:#f9fafb; border-radius:10px; padding:12px; font-size:14px">
+          <div style="font-weight:700; margin-bottom:8px">Calcular envío</div>
+          <div style="display:flex; gap:8px">
+            <input type="text" id="cp-input" placeholder="Código postal"
+                   style="flex:1; padding:7px 12px; border-radius:999px; border:2px solid #e9e9e9; font-size:13px">
+            <button onclick="calcShipping()" class="btn" style="padding:7px 14px; font-size:13px">
+              Calcular
+            </button>
+          </div>
+          <div id="shipping-result" style="margin-top:8px; font-size:13px; color:#666"></div>
+        </div>
+
+        <div style="border-top:2px solid #f0f0f0; padding-top:12px;
+                    display:flex; justify-content:space-between; font-size:1.1rem; font-weight:800">
+          <span>Total estimado</span>
+          <span id="total-display" style="color:var(--color-principal)">$ {{ total }}</span>
+        </div>
+
+        <a href="{% url 'lms:store_checkout' %}" class="btn" style="text-align:center; padding:13px; font-size:1rem">
+          Finalizar compra →
+        </a>
+      </div>
+
+      <div class="card" style="font-size:13px; color:#666; line-height:1.6">
+        <strong style="color:#444">🚚 Envío a todo el país</strong><br>
+        El costo final se calcula según tu código postal y el peso del pedido.
+        Los pedidos grandes obtienen envío bonificado.
+      </div>
+    </div>
+
+  </div>
+
+{% else %}
+  <div class="card" style="text-align:center; padding:56px">
+    <div style="font-size:3rem; margin-bottom:12px">🛒</div>
+    <h2 style="color:#888">Tu carrito está vacío</h2>
+    <a href="{% url 'lms:store' %}" class="btn" style="margin-top:12px">Ir a la tienda</a>
+  </div>
+{% endif %}
+
+<script>
+async function calcShipping() {
+  const cp = document.getElementById('cp-input').value.trim();
+  const result = document.getElementById('shipping-result');
+  const totalDisplay = document.getElementById('total-display');
+  if (!cp) { result.textContent = 'Ingresá un código postal.'; return; }
+
+  result.textContent = 'Calculando...';
+  try {
+    const resp = await fetch(`{% url 'lms:store_shipping_calc' %}?postal_code=${encodeURIComponent(cp)}`);
+    const data = await resp.json();
+    if (data.error) { result.textContent = data.error; return; }
+
+    if (data.free_shipping) {
+      result.innerHTML = `<span style="color:#0b6e31; font-weight:700">✓ Zona: ${data.zone_name} — ¡Envío GRATIS!</span>`;
+    } else {
+      result.innerHTML = `Zona: <strong>${data.zone_name}</strong> — Envío: <strong style="color:var(--color-principal)">$ ${data.shipping_cost.toLocaleString('es-AR')}</strong>`;
+    }
+    totalDisplay.textContent = `$ ${data.total.toLocaleString('es-AR', {minimumFractionDigits:2})}`;
+  } catch(e) {
+    result.textContent = 'Error al calcular. Intentá nuevamente.';
+  }
+}
+
+// Calcular al presionar Enter en el input
+document.getElementById('cp-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); calcShipping(); }
+});
+</script>
+
+{% endblock %}

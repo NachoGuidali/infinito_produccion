@@ -1,0 +1,232 @@
+{% extends 'lms/base.html' %}
+{% block title %}Checkout — Tienda Infinito{% endblock %}
+{% block content %}
+
+<h1 style="margin-bottom:4px">Finalizar compra</h1>
+<p style="color:#888; margin-bottom:24px">Completá tus datos y elegí cómo pagar.</p>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="grid" style="grid-template-columns:1fr 340px; gap:24px; align-items:start">
+
+    {# ── Columna izquierda: formulario ── #}
+    <div style="display:flex; flex-direction:column; gap:20px">
+
+      {# Datos personales #}
+      <div class="card">
+        <h2 style="margin:0 0 16px; font-size:1.1rem">👤 Datos de contacto</h2>
+        <div class="grid grid-2" style="gap:12px">
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Nombre completo *</label>
+            <input type="text" name="recipient_name" required
+                   value="{{ profile.user.get_full_name|default:'' }}"
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Email *</label>
+            <input type="email" name="email" required
+                   value="{{ profile.user.email|default:'' }}"
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Teléfono</label>
+            <input type="tel" name="phone"
+                   value="{{ profile.telefono|default:'' }}"
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+        </div>
+      </div>
+
+      {# Dirección de envío #}
+      <div class="card">
+        <h2 style="margin:0 0 16px; font-size:1.1rem">🚚 Dirección de entrega</h2>
+        <div class="grid grid-2" style="gap:12px">
+          <div style="grid-column:1/-1">
+            <label style="font-size:13px; font-weight:700; color:#555">Dirección (calle y número) *</label>
+            <input type="text" name="address" required
+                   value="{{ profile.address|default:'' }}"
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Ciudad *</label>
+            <input type="text" name="city" required
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Provincia *</label>
+            <input type="text" name="province" required
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px; font-weight:700; color:#555">Código Postal *</label>
+            <input type="text" name="postal_code" id="postal-code" required
+                   value="{{ pre_postal }}"
+                   style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+          </div>
+          <div style="display:flex; align-items:flex-end">
+            <button type="button" onclick="calcShipping()" class="btn-outline" style="padding:9px 18px">
+              Calcular envío
+            </button>
+          </div>
+        </div>
+
+        {# Resultado del cálculo #}
+        <div id="shipping-result" style="margin-top:12px; padding:10px 14px; border-radius:10px; background:#f9fafb; font-size:14px; display:{% if pre_shipping is not none %}block{% else %}none{% endif %}">
+          {% if pre_shipping is not none %}
+            {% if pre_shipping == 0 %}
+              <span style="color:#0b6e31; font-weight:700">✓ ¡Envío GRATIS para tu zona!</span>
+            {% else %}
+              Costo de envío estimado: <strong style="color:var(--color-principal)">$ {{ pre_shipping }}</strong>
+            {% endif %}
+          {% endif %}
+        </div>
+        <input type="hidden" name="shipping_cost" id="shipping-cost-hidden" value="{{ pre_shipping|default:0 }}">
+      </div>
+
+      {# Método de pago #}
+      <div class="card">
+        <h2 style="margin:0 0 16px; font-size:1.1rem">💳 Método de pago</h2>
+
+        <div style="display:flex; flex-direction:column; gap:12px">
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border-radius:12px;
+                        border:2px solid #e9e9e9; cursor:pointer; transition:.2s"
+                 onclick="selectMethod(this,'mp')">
+            <input type="radio" name="payment_method" value="mp" required style="accent-color:var(--color-principal)">
+            <div>
+              <div style="font-weight:700">Mercado Pago</div>
+              <div style="font-size:13px; color:#888">Tarjeta de crédito/débito, dinero en cuenta</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:center; gap:12px; padding:14px; border-radius:12px;
+                        border:2px solid #e9e9e9; cursor:pointer; transition:.2s"
+                 onclick="selectMethod(this,'transfer')">
+            <input type="radio" name="payment_method" value="transfer" style="accent-color:var(--color-principal)">
+            <div>
+              <div style="font-weight:700">Transferencia bancaria</div>
+              <div style="font-size:13px; color:#888">CBU/CVU — te enviamos los datos por email</div>
+            </div>
+          </label>
+
+        </div>
+
+        {# Upload comprobante (visible solo si elige transferencia) #}
+        <div id="receipt-block" style="display:none; margin-top:14px; padding:14px; background:#f9fafb; border-radius:10px">
+          <label style="font-size:13px; font-weight:700; color:#555; display:block; margin-bottom:6px">
+            Adjuntar comprobante de pago (PDF, JPG o PNG)
+          </label>
+          <input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"
+                 style="font-size:13px">
+          <p style="font-size:12px; color:#888; margin:6px 0 0">
+            También podés enviarlo por WhatsApp y lo verificamos manualmente.
+          </p>
+        </div>
+      </div>
+
+      {# Notas opcionales #}
+      <div class="card">
+        <label style="font-size:13px; font-weight:700; color:#555">Notas adicionales (opcional)</label>
+        <textarea name="notes" rows="2"
+                  placeholder="Indicaciones especiales para la entrega, aclaraciones, etc."
+                  style="width:100%; margin-top:6px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px; resize:vertical"></textarea>
+      </div>
+
+    </div>
+
+    {# ── Columna derecha: resumen ── #}
+    <div style="position:sticky; top:90px">
+      <div class="card" style="display:flex; flex-direction:column; gap:14px">
+        <h2 style="margin:0; font-size:1.1rem">Resumen del pedido</h2>
+
+        {% for it in items %}
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:14px">
+            <div style="display:flex; gap:8px; align-items:center">
+              <img src="{{ it.product.image_display|default:'https://via.placeholder.com/40x40' }}"
+                   style="width:38px; height:38px; object-fit:cover; border-radius:6px; border:1px solid #e9e9e9">
+              <span>{{ it.product.name }} <span style="color:#888">×{{ it.qty }}</span></span>
+            </div>
+            <strong>$ {{ it.subtotal }}</strong>
+          </div>
+        {% endfor %}
+
+        <div style="border-top:1px solid #f0f0f0; padding-top:10px; display:flex; justify-content:space-between; font-size:14px">
+          <span>Subtotal</span><strong>$ {{ subtotal }}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:14px">
+          <span>Envío</span>
+          <span id="shipping-display" style="color:var(--color-principal); font-weight:700">
+            {% if pre_shipping == 0 %}Gratis{% elif pre_shipping %}$ {{ pre_shipping }}{% else %}A calcular{% endif %}
+          </span>
+        </div>
+        <div style="border-top:2px solid #f0f0f0; padding-top:12px; display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800">
+          <span>Total</span>
+          <span id="total-display" style="color:var(--color-principal)">
+            $ <span id="total-val">{{ subtotal }}</span>
+          </span>
+        </div>
+
+        <button type="submit" class="btn" style="padding:14px; font-size:1rem; text-align:center">
+          Confirmar pedido ✓
+        </button>
+
+        <a href="{% url 'lms:store_cart' %}" style="text-align:center; font-size:13px; color:#888">
+          ← Volver al carrito
+        </a>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+<script>
+  const subtotalVal = {{ subtotal }};
+
+  function selectMethod(label, method) {
+    document.querySelectorAll('label[onclick]').forEach(l => {
+      l.style.borderColor = '#e9e9e9';
+      l.style.background = 'white';
+    });
+    label.style.borderColor = 'var(--color-principal)';
+    label.style.background = '#fdf2fa';
+    document.getElementById('receipt-block').style.display = method === 'transfer' ? 'block' : 'none';
+  }
+
+  async function calcShipping() {
+    const cp = document.getElementById('postal-code').value.trim();
+    const result = document.getElementById('shipping-result');
+    const shippingDisplay = document.getElementById('shipping-display');
+    const totalVal = document.getElementById('total-val');
+    const hiddenCost = document.getElementById('shipping-cost-hidden');
+
+    if (!cp) { alert('Ingresá un código postal.'); return; }
+
+    result.style.display = 'block';
+    result.textContent = 'Calculando...';
+
+    try {
+      const resp = await fetch(`{% url 'lms:store_shipping_calc' %}?postal_code=${encodeURIComponent(cp)}`);
+      const data = await resp.json();
+      if (data.error) { result.textContent = data.error; return; }
+
+      hiddenCost.value = data.shipping_cost;
+      if (data.free_shipping) {
+        result.innerHTML = '<span style="color:#0b6e31;font-weight:700">✓ ¡Envío GRATIS para tu zona!</span>';
+        shippingDisplay.textContent = 'Gratis';
+      } else {
+        result.innerHTML = `Zona: <strong>${data.zone_name}</strong> — Envío: <strong style="color:var(--color-principal)">$ ${data.shipping_cost.toLocaleString('es-AR')}</strong>`;
+        shippingDisplay.textContent = `$ ${data.shipping_cost.toLocaleString('es-AR')}`;
+      }
+      totalVal.textContent = data.total.toLocaleString('es-AR', {minimumFractionDigits:2});
+    } catch(e) {
+      result.textContent = 'Error al calcular. Intentá de nuevo.';
+    }
+  }
+
+  // Calcular automáticamente si ya hay CP precargado
+  window.addEventListener('DOMContentLoaded', () => {
+    const cp = document.getElementById('postal-code').value.trim();
+    if (cp) calcShipping();
+  });
+</script>
+{% endblock %}

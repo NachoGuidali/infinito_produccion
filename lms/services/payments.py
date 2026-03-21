@@ -13,6 +13,7 @@ from ..models import (
     Stage,
     Entitlement,
     Enrollment,
+    StoreOrder,
 )
 
 
@@ -166,3 +167,76 @@ def create_mp_preference_for_purchase(purchase: Purchase):
     init_point = pref.get("init_point") or pref.get("sandbox_init_point")
 
     return pref_id, init_point
+
+
+# ============================================================
+# MP para StoreOrder (tienda)
+# ============================================================
+def create_mp_preference_for_store_order(order: StoreOrder):
+    """
+    Crea una preferencia de Mercado Pago para un StoreOrder.
+    external_reference = "STORE:{order.id}" para diferenciarlo de Purchase.
+    """
+    access_token = getattr(settings, "MP_ACCESS_TOKEN", "")
+    if not access_token:
+        return None, None
+
+    sdk = mercadopago.SDK(access_token)
+
+    items = []
+    for it in order.items.all():
+        items.append({
+            "title": f"{it.product.name} x{it.qty}",
+            "quantity": it.qty,
+            "unit_price": float(it.unit_price or 0),
+            "currency_id": "ARS",
+        })
+
+    # Agregar envío como ítem si tiene costo
+    if order.shipping_ars and order.shipping_ars > 0:
+        items.append({
+            "title": "Costo de envío",
+            "quantity": 1,
+            "unit_price": float(order.shipping_ars),
+            "currency_id": "ARS",
+        })
+
+    # URL de éxito para la tienda
+    success_url = getattr(settings, "MP_STORE_SUCCESS_URL", "") or getattr(settings, "MP_SUCCESS_URL", "") or ""
+
+    preference_data = {
+        "items": items,
+        "external_reference": f"STORE:{order.id}",
+        "notification_url": getattr(settings, "MP_WEBHOOK_URL", "") or "",
+        "back_urls": {
+            "success": success_url,
+            "failure":  success_url,
+            "pending":  success_url,
+        },
+        "auto_return": "approved",
+        "payer": {
+            "name":  order.recipient_name,
+            "email": order.email,
+        },
+    }
+
+    result = sdk.preference().create(preference_data)
+    pref = result.get("response", {}) if isinstance(result, dict) else {}
+    pref_id   = pref.get("id")
+    init_point = pref.get("init_point") or pref.get("sandbox_init_point")
+
+    return pref_id, init_point
+
+
+def mark_store_order_paid(order: StoreOrder, external_ref: str | None = None):
+    """
+    Marca un StoreOrder como pagado.
+    Se llama desde el webhook cuando MP confirma el pago.
+    """
+    if order.status == "paid":
+        return  # idempotente
+
+    order.status = "paid"
+    if external_ref:
+        order.notes = f"MP ref: {external_ref}"
+    order.save(update_fields=["status", "notes"])

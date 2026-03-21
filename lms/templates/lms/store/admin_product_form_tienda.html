@@ -1,0 +1,111 @@
+{% extends 'lms/base.html' %}
+{% block title %}{% if product %}Editar{% else %}Nuevo{% endif %} Producto — Admin{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px">
+  <a href="{% url 'lms:store_admin' %}?tab=products" style="color:var(--color-principal); font-weight:600">
+    ← Volver a productos
+  </a>
+</div>
+<h1 style="margin:0 0 24px">{% if product %}✏️ Editar: {{ product.name }}{% else %}+ Nuevo producto{% endif %}</h1>
+
+<div style="max-width:720px">
+  <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:20px">
+    {% csrf_token %}
+
+    <div class="card">
+      <h2 style="margin:0 0 16px; font-size:1.05rem">Información general</h2>
+      <div class="grid grid-2" style="gap:14px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:13px; font-weight:700; color:#555">Nombre *</label>
+          <input type="text" name="name" required value="{{ product.name|default:'' }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Precio (ARS) *</label>
+          <input type="number" step="0.01" name="price_ars" required value="{{ product.price_ars|default:'' }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Stock</label>
+          <input type="number" name="stock" value="{{ product.stock|default:'0' }}"
+                 style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Categoría</label>
+          <select name="category" style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+            <option value="">— Sin categoría —</option>
+            {% for cat in categories %}
+              <option value="{{ cat.id }}" {% if product and product.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:700; color:#555">Estado</label>
+          <select name="is_active" style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+            <option value="true" {% if not product or product.is_active %}selected{% endif %}>✅ Activo</option>
+            <option value="false" {% if product and not product.is_active %}selected{% endif %}>⏸️ Inactivo</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:13px; font-weight:700; color:#555">Descripción</label>
+          <textarea name="description" rows="3"
+                    style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px; resize:vertical">{{ product.description|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 16px; font-size:1.05rem">📷 Imagen</h2>
+      {% if product and product.image_display %}
+        <img src="{{ product.image_display }}" style="width:120px; height:90px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #e9e9e9">
+      {% endif %}
+      <div>
+        <label style="font-size:13px; font-weight:700; color:#555">Subir imagen (archivo)</label>
+        <input type="file" name="image" accept="image/*" style="display:block; margin-top:6px; font-size:13px">
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:13px; font-weight:700; color:#555">O URL externa de imagen</label>
+        <input type="url" name="image_url" value="{{ product.image_url|default:'' }}"
+               placeholder="https://..."
+               style="width:100%; margin-top:4px; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 4px; font-size:1.05rem">📐 Datos logísticos</h2>
+      <p style="color:#888; font-size:13px; margin:0 0 14px">Necesarios para calcular el costo de envío correctamente.</p>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr); gap:12px">
+        {% for field, label, unit in logistics_fields %}{% endfor %}
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#555">Peso (kg)</label>
+          <input type="number" step="0.001" name="weight_kg" value="{{ product.weight_kg|default:'0' }}"
+                 style="width:100%; margin-top:3px; padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#555">Ancho (cm)</label>
+          <input type="number" step="0.1" name="width_cm" value="{{ product.width_cm|default:'0' }}"
+                 style="width:100%; margin-top:3px; padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#555">Alto (cm)</label>
+          <input type="number" step="0.1" name="height_cm" value="{{ product.height_cm|default:'0' }}"
+                 style="width:100%; margin-top:3px; padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:700; color:#555">Prof. (cm)</label>
+          <input type="number" step="0.1" name="depth_cm" value="{{ product.depth_cm|default:'0' }}"
+                 style="width:100%; margin-top:3px; padding:8px 12px; border-radius:8px; border:2px solid #e9e9e9; font-size:13px">
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px">
+      <a href="{% url 'lms:store_admin' %}?tab=products" class="btn-outline" style="padding:11px 24px">Cancelar</a>
+      <button type="submit" class="btn" style="padding:11px 32px">
+        {% if product %}Guardar cambios ✓{% else %}Crear producto ✓{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
