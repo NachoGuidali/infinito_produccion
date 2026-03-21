@@ -40,4 +40,52 @@
       />
     </div> 
 </section>
+
+
+<!-- POPUP VIDEO BIENVENIDA -->
+<div id="videoModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+
+        <video
+            id="homeVideo"
+            width="100%"
+            controls
+            muted
+            playsinline
+            preload="none">
+        </video>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("homeVideo");
+    const close = document.querySelector(".close");
+
+    // siempre se abre
+    modal.style.display = "flex";
+
+    // carga el video al abrir
+    video.innerHTML = `
+        <source src="{% static 'media/bienvenida.mp4' %}" type="video/mp4">
+    `;
+
+    video.play().catch(() => {});
+
+    function closeModal() {
+        modal.style.display = "none";
+        video.pause();
+        video.currentTime = 0;
+        video.innerHTML = "";
+    }
+
+    close.onclick = closeModal;
+
+    window.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+});
+</script>
 {% endblock %}
