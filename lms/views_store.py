@@ -28,6 +28,7 @@ from .models import (
     StoreOrder,
     StoreOrderItem,
 )
+from .services.payments import create_mp_preference_for_store_order
 
 TAB_ITEMS = [
     ("products",   "📦 Productos"),
@@ -285,6 +286,12 @@ def store_checkout(request):
 
             request.session["store_cart"] = {}
             request.session.modified = True
+
+            if data["payment_method"] == "mp":
+                _, init_point = create_mp_preference_for_store_order(order)
+                if init_point:
+                    return redirect(init_point)
+
             return redirect(reverse("lms:store_order_success", args=[order.id]))
 
     pre_postal   = getattr(prof, "postal_code", "") or ""

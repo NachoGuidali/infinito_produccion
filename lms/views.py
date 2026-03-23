@@ -40,7 +40,9 @@ from .services.payments import (
     create_checkout,
     mark_paid_and_grant,
     create_mp_preference_for_purchase,
+    mark_store_order_paid,
 )
+from .models import StoreOrder as _StoreOrder
 from django.contrib.auth.views import LoginView
 
 
@@ -741,12 +743,21 @@ def webhook_paid(request):
         return HttpResponse("no external_reference", status=400)
 
     if status in ("approved", "authorized"):
-        try:
-            purchase = Purchase.objects.get(id=int(external_reference))
-        except (ValueError, Purchase.DoesNotExist):
-            return HttpResponse("purchase not found", status=404)
-
-        mark_paid_and_grant(purchase, external_ref=f"MP:{payment_id}")
+        if external_reference.startswith("STORE:"):
+            # Pedido de la tienda
+            try:
+                order_id = int(external_reference.split(":", 1)[1])
+                order = _StoreOrder.objects.get(id=order_id)
+            except (ValueError, IndexError, _StoreOrder.DoesNotExist):
+                return HttpResponse("store order not found", status=404)
+            mark_store_order_paid(order, external_ref=f"MP:{payment_id}")
+        else:
+            # Pedido de cursos
+            try:
+                purchase = Purchase.objects.get(id=int(external_reference))
+            except (ValueError, Purchase.DoesNotExist):
+                return HttpResponse("purchase not found", status=404)
+            mark_paid_and_grant(purchase, external_ref=f"MP:{payment_id}")
 
     return HttpResponse("ok")
 
