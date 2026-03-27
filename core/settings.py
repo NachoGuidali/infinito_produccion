@@ -169,10 +169,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # -------------------------
 # Mercado Pago
 # -------------------------
-MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "")
-MP_PUBLIC_KEY   = os.getenv("MP_PUBLIC_KEY", "")
-MP_WEBHOOK_URL  = os.getenv("MP_WEBHOOK_URL", "")
-MP_SUCCESS_URL  = os.getenv("MP_SUCCESS_URL", "")
+MP_ACCESS_TOKEN      = os.getenv("MP_ACCESS_TOKEN", "")
+MP_PUBLIC_KEY        = os.getenv("MP_PUBLIC_KEY", "")
+MP_WEBHOOK_URL       = os.getenv("MP_WEBHOOK_URL", "")
+MP_SUCCESS_URL       = os.getenv("MP_SUCCESS_URL", "")
+MP_STORE_SUCCESS_URL = os.getenv("MP_STORE_SUCCESS_URL", "")
 # Permite que el navegador envíe al menos el ORIGIN como referer a sitios externos (YouTube)
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 

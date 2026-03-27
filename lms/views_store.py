@@ -324,6 +324,32 @@ def store_order_success(request, order_id):
 
 
 @login_required
+def store_payment_return(request):
+    """
+    Retorno desde Mercado Pago tras el pago de un pedido de tienda.
+    MP agrega ?external_reference=STORE:XX&status=approved&payment_id=... a la URL.
+    Redirige al pedido correspondiente si pertenece al usuario.
+    """
+    external_reference = request.GET.get("external_reference", "")
+    status = request.GET.get("status", "")
+
+    if external_reference.startswith("STORE:"):
+        try:
+            order_id = int(external_reference.split(":", 1)[1])
+            order = StoreOrder.objects.get(id=order_id, user=request.user)
+            # Si MP aprueba pero el webhook aún no procesó, marcamos pagado aquí también
+            if status == "approved" and order.status == "pending":
+                order.status = "paid"
+                order.save(update_fields=["status"])
+            return redirect(reverse("lms:store_order_success", args=[order.id]))
+        except (ValueError, IndexError, StoreOrder.DoesNotExist):
+            pass
+
+    messages.info(request, "Tu pago fue procesado. Revisá tus pedidos.")
+    return redirect(reverse("lms:store_my_orders"))
+
+
+@login_required
 def store_my_orders(request):
     orders = StoreOrder.objects.filter(user=request.user).prefetch_related("items__product")
     return render(request, "lms/store/my_orders_tienda.html", {"orders": orders})

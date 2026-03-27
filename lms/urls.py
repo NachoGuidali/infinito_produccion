@@ -105,6 +105,7 @@ urlpatterns = [
 
     # Checkout tienda
     path("tienda/checkout/", views_store.store_checkout, name="store_checkout"),
+    path("tienda/pago-retorno/", views_store.store_payment_return, name="store_payment_return"),
     path("tienda/pedido/<int:order_id>/confirmado/", views_store.store_order_success, name="store_order_success"),
 
     # ─── ADMIN TIENDA ─────────────────────────────────────────────

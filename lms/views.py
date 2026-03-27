@@ -714,14 +714,28 @@ def webhook_paid(request):
         return HttpResponse("ok")
 
     # --- Notificación de Mercado Pago ---
+    # MP puede enviar el webhook como form-data (topic/id en POST o GET)
+    # o como JSON body ({"type":"payment","data":{"id":"..."}})
+    import json as _json
+    json_body = {}
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            json_body = _json.loads(request.body)
+        except Exception:
+            pass
+
     data = request.POST if request.method == "POST" else request.GET
-    topic = data.get("topic") or data.get("type")
+    topic = json_body.get("type") or data.get("topic") or data.get("type")
 
     if topic != "payment":
         # Podés expandir acá para merchant_order si lo necesitás
         return HttpResponse("ignored", status=200)
 
-    payment_id = data.get("id") or data.get("data.id")
+    payment_id = (
+        (json_body.get("data") or {}).get("id")
+        or data.get("id")
+        or data.get("data.id")
+    )
     if not payment_id:
         return HttpResponse("missing payment id", status=400)
 
