@@ -934,6 +934,13 @@ def profile(request):
     )
     purchases = [_hydrate_purchase_display(p) for p in purchases_qs]
 
+    # Pedidos de la tienda
+    store_orders = (
+        _StoreOrder.objects.filter(user=user)
+        .prefetch_related("items__product")
+        .order_by("-created_at")
+    )
+
     stats = {
         "inscriptos": total_inscriptos,
         "en_progreso": total_en_progreso,
@@ -958,6 +965,7 @@ def profile(request):
             "avatar_url": avatar_url,
             "courses_data": courses_data,
             "purchases": purchases,
+            "store_orders": store_orders,
             "stats": stats,
             "extra": extra,
         },
