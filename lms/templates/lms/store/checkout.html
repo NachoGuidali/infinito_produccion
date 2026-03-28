@@ -1,13 +1,21 @@
 {% extends 'lms/base.html' %}
 {% block title %}Checkout — Tienda Infinito{% endblock %}
 {% block content %}
+<style>
+.checkout-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+.checkout-summary { position: sticky; top: 90px; }
+@media (max-width: 768px) {
+  .checkout-layout { grid-template-columns: 1fr; }
+  .checkout-summary { position: static; order: -1; }
+}
+</style>
 
 <h1 style="margin-bottom:4px">Finalizar compra</h1>
 <p style="color:#888; margin-bottom:24px">Completá tus datos y elegí cómo pagar.</p>
 
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
-  <div class="grid" style="grid-template-columns:1fr 340px; gap:24px; align-items:start">
+  <div class="checkout-layout">
 
     {# ── Columna izquierda: formulario ── #}
     <div style="display:flex; flex-direction:column; gap:20px">
@@ -135,7 +143,7 @@
     </div>
 
     {# ── Columna derecha: resumen ── #}
-    <div style="position:sticky; top:90px">
+    <div class="checkout-summary">
       <div class="card" style="display:flex; flex-direction:column; gap:14px">
         <h2 style="margin:0; font-size:1.1rem">Resumen del pedido</h2>
 

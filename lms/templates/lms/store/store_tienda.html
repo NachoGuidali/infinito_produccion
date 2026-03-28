@@ -1,6 +1,14 @@
 {% extends 'lms/base.html' %}
 {% block title %}Tienda — Infinito Capacitaciones{% endblock %}
 {% block content %}
+<style>
+@media (max-width: 640px) {
+  .store-filters { flex-direction: column; align-items: stretch !important; }
+  .store-search-form { margin-left: 0 !important; width: 100%; }
+  .store-search-form input { width: 100% !important; }
+  .store-search-form button { flex-shrink: 0; }
+}
+</style>
 
 {# ── Cabecera ── #}
 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px">
@@ -23,7 +31,7 @@
 </div>
 
 {# ── Filtros ── #}
-<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px">
+<div class="store-filters" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px">
   <a href="{% url 'lms:store' %}"
      class="{% if not selected_cat %}btn{% else %}btn-outline{% endif %}">
     Todo
@@ -36,10 +44,10 @@
   {% endfor %}
 
   {# Buscador #}
-  <form method="get" action="{% url 'lms:store' %}" style="margin-left:auto; display:flex; gap:8px">
+  <form method="get" action="{% url 'lms:store' %}" class="store-search-form" style="margin-left:auto; display:flex; gap:8px">
     {% if selected_cat %}<input type="hidden" name="cat" value="{{ selected_cat }}">{% endif %}
     <input type="text" name="q" value="{{ search_q }}" placeholder="Buscar producto..."
-           style="padding:8px 14px; border-radius:999px; border:2px solid #e9e9e9; font-size:14px; outline:none; width:220px">
+           style="padding:8px 14px; border-radius:999px; border:2px solid #e9e9e9; font-size:14px; outline:none; flex:1; min-width:0">
     <button type="submit" class="btn">Buscar</button>
   </form>
 </div>

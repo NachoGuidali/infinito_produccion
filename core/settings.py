@@ -150,7 +150,8 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 CSRF_TRUSTED_ORIGINS = ["https://infinitocapacitaciones.com", "https://www.infinitocapacitaciones.com"]
 CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE   = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Ejemplo de configuración SMTP para prod (descomentá y setea variables):
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
