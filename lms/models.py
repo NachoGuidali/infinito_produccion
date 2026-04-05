@@ -288,10 +288,10 @@ class Product(TimeStamped):
     is_active   = models.BooleanField("Activo", default=True)
 
     # Datos logísticos para cálculo de envío
-    weight_kg   = models.DecimalField("Peso (kg)", max_digits=6, decimal_places=3, default=0)
-    width_cm    = models.DecimalField("Ancho (cm)", max_digits=6, decimal_places=1, default=0)
-    height_cm   = models.DecimalField("Alto (cm)",  max_digits=6, decimal_places=1, default=0)
-    depth_cm    = models.DecimalField("Prof. (cm)", max_digits=6, decimal_places=1, default=0)
+    weight_kg   = models.DecimalField("Peso (kg)", max_digits=8, decimal_places=3, default=0)
+    width_cm    = models.DecimalField("Ancho (cm)", max_digits=8, decimal_places=1, default=0)
+    height_cm   = models.DecimalField("Alto (cm)",  max_digits=8, decimal_places=1, default=0)
+    depth_cm    = models.DecimalField("Prof. (cm)", max_digits=8, decimal_places=1, default=0)
 
     class Meta:
         verbose_name = "Producto"
