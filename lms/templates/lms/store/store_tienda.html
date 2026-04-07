@@ -61,7 +61,7 @@
         <a href="{% url 'lms:store_product_detail' product.slug %}">
           <img src="{{ product.image_display|default:'https://via.placeholder.com/640x400?text=Producto' }}"
                alt="{{ product.name }}"
-               style="width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:1px solid #e9e9e9">
+               style="width:100%; aspect-ratio:4/3; object-fit:contain; border-radius:10px; border:1px solid #e9e9e9">
         </a>
 
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px">
@@ -69,7 +69,7 @@
             <a href="{% url 'lms:store_product_detail' product.slug %}" style="color:inherit">{{ product.name }}</a>
           </h3>
           {% if product.category %}
-            <span style="white-space:nowrap; font-size:12px; font-weight:700;
+            <span style="font-size:12px; font-weight:700;
                          padding:4px 10px; border-radius:999px;
                          background:#f7e7fb; color:#8a2b8f; border:1px solid #ecd9f0;">
               {{ product.category.name }}
