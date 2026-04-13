@@ -10,11 +10,27 @@
 }
 </style>
 
+{# ── Banner promo ── #}
+<div style="
+  width:100%;
+  background: linear-gradient(90deg, #8a2b8f, #b84fc2);
+  color:white;
+  padding:10px 16px;
+  border-radius:10px;
+  margin-bottom:16px;
+  font-weight:600;
+  text-align:center;
+  font-size:14px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+">
+  🚚 ¡Envío gratis a partir de $150.000!
+</div>
+
 {# ── Cabecera ── #}
 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:18px">
   <div>
     <h1 style="margin:0">🛍️ Tienda</h1>
-    <p style="margin:4px 0 0; color:#888">Productos y materiales para tu formación</p>
+    <p style="margin:4px 0 0; color:#888">Productos y materiales para tu formación - <b>si sos profesional, ¡contactanos!</b></p>
   </div>
   <a href="{% url 'lms:store_cart' %}" class="btn" style="position:relative">
     🛒 Mi carrito

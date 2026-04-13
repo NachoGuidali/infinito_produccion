@@ -49,15 +49,22 @@
     </div>
 
     {# Datos logísticos #}
-    {% if product.weight_kg %}
+    <!-- {% if product.weight_kg %}
       <div style="background:#f9fafb; border-radius:10px; padding:12px; font-size:13px; color:#666">
         <strong style="color:#444">Datos de envío:</strong>
         <span style="margin-left:8px">Peso: {{ product.weight_kg }} kg</span>
         {% if product.width_cm %}
           · Medidas: {{ product.width_cm }}×{{ product.height_cm }}×{{ product.depth_cm }} cm
         {% endif %}
+        
       </div>
-    {% endif %}
+    {% endif %} -->
+    <div style="background:#f9fafb; border-radius:10px; padding:12px; font-size:13px; color:#666">
+        <strong style="color:#444">Envío:</strong>
+        <span style="margin-left:8px">Acordar con el vendedor</span>
+        
+        
+      </div>
 
     {# Botón agregar #}
     {% if product.stock > 0 %}
