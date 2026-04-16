@@ -32,6 +32,15 @@
     <h1 style="margin:0">🛍️ Tienda</h1>
     <p style="margin:4px 0 0; color:#888">Productos y materiales para tu formación - <b>si sos profesional, ¡contactanos!</b></p>
   </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+  {% load static %}
+  <a href="{% static 'lms/catalogo_collage.pdf' %}" download="Vademecum_Infinito.pdf"
+     class="btn btn-outline" style="font-size:14px">
+    📄 Descargar Vademécum
+  </a>
+  <a href="{% url 'lms:store_my_orders' %}" class="btn btn-outline" style="font-size:14px">
+    📦 Mis pedidos
+  </a>
   <a href="{% url 'lms:store_cart' %}" class="btn" style="position:relative">
     🛒 Mi carrito
     {% if cart_count > 0 %}
@@ -44,6 +53,7 @@
         font-size:11px; font-weight:800;">{{ cart_count }}</span>
     {% endif %}
   </a>
+  </div>
 </div>
 
 {# ── Filtros ── #}

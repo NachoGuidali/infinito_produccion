@@ -1,0 +1,43 @@
+{% comment %}
+Botón flotante del carrito de la TIENDA con contador de ítems en sesión.
+Requiere que exista la ruta: lms:store_cart
+{% endcomment %}
+
+{% with store_cart=request.session.store_cart %}
+{% with store_count=store_cart|length %}
+<a href="{% url 'lms:store_cart' %}" aria-label="Carrito tienda"
+   style="
+     position:fixed; right:18px; bottom:154px; z-index:9999;
+     width:56px; height:56px; border-radius:50%;
+     background:#ff4ec6; box-shadow:0 6px 18px rgba(0,0,0,.18);
+     display:flex; align-items:center; justify-content:center; color:#fff;">
+  <!-- Icono bolsa de compras -->
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
+    <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm0 10c-1.66 0-3-1.34-3-3h2c0 .55.45 1 1 1s1-.45 1-1h2c0 1.66-1.34 3-3 3z"/>
+  </svg>
+
+  <!-- Burbuja contador -->
+  <span id="store-cart-badge"
+        style="
+          position:absolute; top:-6px; right:-6px; min-width:22px; height:22px;
+          background:#0b2a3a; color:#fff; font-weight:800; font-size:12px;
+          border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 6px;">
+    {{ store_count|default:0 }}
+  </span>
+</a>
+{% endwith %}
+{% endwith %}
+
+<script>
+(function(){
+  window.addEventListener('store_cart:added', function(ev){
+    try{
+      var add = (ev.detail && ev.detail.count) ? parseInt(ev.detail.count,10) : 1;
+      var b = document.getElementById('store-cart-badge');
+      if(!b) return;
+      var curr = parseInt(b.textContent || '0', 10) || 0;
+      b.textContent = (curr + add);
+    }catch(_){}
+  }, false);
+})();
+</script>

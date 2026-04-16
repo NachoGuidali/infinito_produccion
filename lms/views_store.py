@@ -362,6 +362,26 @@ def store_my_orders(request):
     return render(request, "lms/store/my_orders_tienda.html", {"orders": orders})
 
 
+@login_required
+def store_order_pay(request, order_id):
+    """
+    Genera una nueva preferencia de MP para un pedido pendiente y redirige al pago.
+    Sirve para cuando el usuario volvió atrás sin completar el pago.
+    """
+    order = get_object_or_404(StoreOrder, id=order_id, user=request.user)
+
+    if order.status != "pending" or order.payment_method != "mp":
+        messages.warning(request, "Este pedido no puede ser pagado con Mercado Pago.")
+        return redirect(reverse("lms:store_my_orders"))
+
+    _, init_point = create_mp_preference_for_store_order(order)
+    if init_point:
+        return redirect(init_point)
+
+    messages.error(request, "No se pudo generar el link de pago. Intentá de nuevo más tarde.")
+    return redirect(reverse("lms:store_my_orders"))
+
+
 # ─── ADMIN TIENDA ─────────────────────────────────────────────────────────────
 
 @user_passes_test(_is_staff)

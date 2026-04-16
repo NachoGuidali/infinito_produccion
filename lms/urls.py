@@ -12,6 +12,7 @@ urlpatterns = [
     # --- Signup (registro + confirmación por email) ---
     path("crear-cuenta/", views.signup, name="signup"),
     path("crear-cuenta/hecho/", views.signup_done, name="signup_done"),
+    path("crear-cuenta/reenviar/", views.resend_activation, name="resend_activation"),
     path("crear-cuenta/confirmar/<str:token>/", views.signup_confirm, name="signup_confirm"),
     # Alias opcional corto
     path("signup/", RedirectView.as_view(pattern_name="lms:signup", permanent=False)),
@@ -58,6 +59,7 @@ urlpatterns = [
     # Perfil
     path("perfil/", views.profile, name="profile"),
     path("mis-pedidos/", views_store.store_my_orders, name="store_my_orders"),
+    path("mis-pedidos/<int:order_id>/pagar/", views_store.store_order_pay, name="store_order_pay"),
 
     # Panel admin "ligero" (ruta principal)
     path("panel-admin/", views.admin_panel, name="admin_panel"),

@@ -9,10 +9,31 @@
     <p class="help" style="margin-top:8px">
       Si no lo encontrás, revisá la carpeta de <em>Spam</em> o <em>Promociones</em>.
     </p>
-    <div style="margin-top:16px">
+    <div style="margin-top:20px">
       <a class="btn btn-outline" href="{% url 'lms:home' %}">Volver al inicio</a>
       <a class="btn" href="{% url 'login' %}">Ir a iniciar sesión</a>
     </div>
+
+    <hr style="margin:24px 0; border:none; border-top:1px solid #e9e9e9">
+
+    <p style="color:#888; font-size:14px">¿No recibiste el email?</p>
+    <form method="post" action="{% url 'lms:resend_activation' %}" style="margin-top:8px">
+      {% csrf_token %}
+      {% if request.session.pending_activation_email %}
+        <input type="hidden" name="email" value="{{ request.session.pending_activation_email }}">
+        <button type="submit" class="btn btn-outline" style="font-size:14px">
+          Reenviar link de activación
+        </button>
+      {% else %}
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap">
+          <input type="email" name="email" placeholder="Tu email" required
+                 style="padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; width:220px">
+          <button type="submit" class="btn btn-outline" style="font-size:14px">
+            Reenviar link
+          </button>
+        </div>
+      {% endif %}
+    </form>
   </div>
 </div>
 {% endblock %}

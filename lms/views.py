@@ -48,6 +48,22 @@ from django.contrib.auth.views import LoginView
 
 class CustomLoginView(LoginView):
     authentication_form = LoginForm
+
+    def form_invalid(self, form):
+        """
+        Si el login falla, verificar si el usuario existe pero no activó su cuenta.
+        En ese caso redirigir a signup_done en lugar de mostrar error genérico.
+        """
+        username_input = self.request.POST.get("username", "").strip()
+        UserModel = get_user_model()
+        user = (
+            UserModel.objects.filter(username=username_input, is_active=False).first()
+            or UserModel.objects.filter(email=username_input, is_active=False).first()
+        )
+        if user:
+            self.request.session["pending_activation_email"] = user.email
+            return redirect(reverse("lms:signup_done"))
+        return super().form_invalid(form)
 # =======================
 # Helpers (avatar + gravatar + activación)
 # =======================
@@ -149,6 +165,29 @@ def signup(request):
 
 def signup_done(request):
     return render(request, "lms/signup_done.html")
+
+
+def resend_activation(request):
+    """
+    Reenvía el email de activación al usuario pendiente de verificación.
+    El email se obtiene de la sesión (guardado al intentar login sin activar),
+    o del POST si el usuario lo ingresa manualmente.
+    """
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+    else:
+        email = request.session.get("pending_activation_email", "")
+
+    if email:
+        UserModel = get_user_model()
+        user = UserModel.objects.filter(email=email, is_active=False).first()
+        if user:
+            _send_activation_email(request, user)
+
+    # Siempre redirigir a signup_done, tanto si encontró el usuario como si no
+    # (no revelar si el email existe o no)
+    messages.success(request, "Si tu cuenta está pendiente de activación, reenviamos el link a tu email.")
+    return redirect(reverse("lms:signup_done"))
 
 
 def signup_confirm(request, token):
