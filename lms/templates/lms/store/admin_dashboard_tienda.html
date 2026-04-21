@@ -148,76 +148,100 @@
   </div>
 
   {% if orders %}
-    <div class="card" style="overflow:hidden; padding:0">
-      <table style="width:100%; border-collapse:collapse; font-size:14px">
-        <thead>
-          <tr style="background:#f9fafb; border-bottom:2px solid #e9e9e9">
-            <th style="padding:10px 14px; text-align:left">#</th>
-            <th style="padding:10px 14px; text-align:left">Cliente</th>
-            <th style="padding:10px 14px; text-align:left">Fecha</th>
-            <th style="padding:10px 14px; text-align:right">Total</th>
-            <th style="padding:10px 14px; text-align:center">Estado</th>
-            <th style="padding:10px 14px; text-align:center">Cambiar estado</th>
-            <th style="padding:10px 14px; text-align:center">Comprobante</th>
-            <th style="padding:10px 14px; text-align:center">Detalle</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for order in orders %}
-            <tr style="border-bottom:1px solid #f0f0f0">
-              <td style="padding:10px 14px; font-weight:700">#{{ order.id }}</td>
-              <td style="padding:10px 14px">
-                <div style="font-weight:600">{{ order.recipient_name }}</div>
-                <div style="color:#888; font-size:12px">{{ order.email }}</div>
-              </td>
-              <td style="padding:10px 14px; color:#888">{{ order.created_at|date:"d/m/Y H:i" }}</td>
-              <td style="padding:10px 14px; text-align:right; font-weight:800; color:var(--color-principal)">$ {{ order.total_ars }}</td>
-              <td style="padding:10px 14px; text-align:center">
-                <span style="border-radius:999px; padding:3px 12px; font-size:12px; font-weight:700;
-                  {% if order.status == 'delivered' or order.status == 'paid' %}background:#e7f9ed;color:#0b6e31
-                  {% elif order.status == 'shipped' %}background:#eef6ff;color:#0b3b91
-                  {% elif order.status == 'cancelled' %}background:#ffeff1;color:#b30b2a
-                  {% else %}background:#fff8e1;color:#795548{% endif %}">
-                  {{ order.get_status_display }}
-                </span>
-              </td>
-              <td style="padding:8px 14px; text-align:center">
-                <form method="post" action="{% url 'lms:store_admin_order_update' order.id %}"
-                      style="display:flex; gap:5px; align-items:center; justify-content:center">
-                  {% csrf_token %}
-                  <input type="hidden" name="tracking_number" value="{{ order.tracking_number }}">
-                  <input type="hidden" name="tracking_url" value="{{ order.tracking_url }}">
-                  <input type="hidden" name="next" value="{% url 'lms:store_admin' %}?tab=orders">
-                  <select name="status"
-                          style="padding:4px 8px; border-radius:8px; border:1.5px solid #e9e9e9; font-size:12px; cursor:pointer">
-                    {% for val, label in order_statuses %}
-                      <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                  <button type="submit" class="btn" style="padding:4px 10px; font-size:12px">✓</button>
-                </form>
-              </td>
-              <td style="padding:10px 14px; text-align:center">
-                {% if order.transfer_receipt %}
-                  <a href="{{ order.transfer_receipt.url }}" target="_blank"
-                     class="btn-outline" style="padding:4px 10px; font-size:12px; color:#0b3b91; border-color:#0b3b91">
-                    📄 Ver
-                  </a>
-                {% elif order.payment_method == 'transfer' %}
-                  <span style="font-size:12px; color:#e53935">Sin comprobante</span>
-                {% else %}
-                  <span style="font-size:12px; color:#ccc">—</span>
-                {% endif %}
-              </td>
-              <td style="padding:10px 14px; text-align:center">
-                <a href="{% url 'lms:store_admin_order_detail' order.id %}" class="btn-outline"
-                   style="padding:4px 12px; font-size:12px">Ver detalle</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <div class="card" style="overflow-x:auto; padding:0;">
+  <table style="width:100%; min-width:900px; border-collapse:collapse; font-size:14px">
+    <thead>
+      <tr style="background:#f9fafb; border-bottom:2px solid #e9e9e9">
+        <th style="padding:10px 14px; text-align:left">#</th>
+        <th style="padding:10px 14px; text-align:left">Cliente</th>
+        <th style="padding:10px 14px; text-align:left">Fecha</th>
+        <th style="padding:10px 14px; text-align:right">Total</th>
+        <th style="padding:10px 14px; text-align:center">Estado</th>
+        <th style="padding:10px 14px; text-align:center">Cambiar estado</th>
+        <th style="padding:10px 14px; text-align:center">Comprobante</th>
+        <th style="padding:10px 14px; text-align:center">Detalle</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for order in orders %}
+        <tr style="border-bottom:1px solid #f0f0f0">
+          <td style="padding:10px 14px; font-weight:700">#{{ order.id }}</td>
+
+          <td style="padding:10px 14px">
+            <div style="font-weight:600">{{ order.recipient_name }}</div>
+            <div style="color:#888; font-size:12px">{{ order.email }}</div>
+          </td>
+
+          <td style="padding:10px 14px; color:#888">
+            {{ order.created_at|date:"d/m/Y H:i" }}
+          </td>
+
+          <td style="padding:10px 14px; text-align:right; font-weight:800; color:var(--color-principal)">
+            $ {{ order.total_ars }}
+          </td>
+
+          <td style="padding:10px 14px; text-align:center">
+            <span style="border-radius:999px; padding:3px 12px; font-size:12px; font-weight:700;
+              {% if order.status == 'delivered' or order.status == 'paid' %}background:#e7f9ed;color:#0b6e31
+              {% elif order.status == 'shipped' %}background:#eef6ff;color:#0b3b91
+              {% elif order.status == 'cancelled' %}background:#ffeff1;color:#b30b2a
+              {% else %}background:#fff8e1;color:#795548{% endif %}">
+              {{ order.get_status_display }}
+            </span>
+          </td>
+
+          <td style="padding:8px 14px; text-align:center">
+            <form method="post"
+                  action="{% url 'lms:store_admin_order_update' order.id %}"
+                  style="display:flex; gap:5px; align-items:center; justify-content:center">
+              {% csrf_token %}
+              <input type="hidden" name="tracking_number" value="{{ order.tracking_number }}">
+              <input type="hidden" name="tracking_url" value="{{ order.tracking_url }}">
+              <input type="hidden" name="next" value="{% url 'lms:store_admin' %}?tab=orders">
+
+              <select name="status"
+                      style="padding:4px 6px; border-radius:8px; border:1.5px solid #e9e9e9; font-size:12px;">
+                {% for val, label in order_statuses %}
+                  <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+
+              <button type="submit" class="btn"
+                      style="padding:4px 8px; font-size:12px; white-space:nowrap;">
+                ✓
+              </button>
+            </form>
+          </td>
+
+          <td style="padding:10px 14px; text-align:center">
+            {% if order.transfer_receipt %}
+              <a href="{{ order.transfer_receipt.url }}" target="_blank"
+                 class="btn-outline"
+                 style="padding:4px 8px; font-size:12px; white-space:nowrap; color:#0b3b91; border-color:#0b3b91">
+                📄 Ver
+              </a>
+            {% elif order.payment_method == 'transfer' %}
+              <span style="font-size:12px; color:#e53935">Sin comprobante</span>
+            {% else %}
+              <span style="font-size:12px; color:#ccc">—</span>
+            {% endif %}
+          </td>
+
+          <td style="padding:10px 14px; text-align:center">
+            <a href="{% url 'lms:store_admin_order_detail' order.id %}"
+               class="btn-outline"
+               style="padding:4px 8px; font-size:12px; white-space:nowrap;">
+              Ver detalle
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
   {% else %}
     <p style="color:#888">No hay pedidos para mostrar.</p>
   {% endif %}
