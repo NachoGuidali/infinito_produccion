@@ -144,6 +144,21 @@
         </div>
       </div>
 
+      {# Código de descuento #}
+      <div class="card">
+        <h2 style="margin:0 0 12px; font-size:1.1rem">🏷️ Código de descuento</h2>
+        <div style="display:flex; gap:8px">
+          <input type="text" id="discount-input" name="discount_code"
+                 placeholder="Ingresá tu código"
+                 style="flex:1; padding:9px 14px; border-radius:10px; border:2px solid #e9e9e9; font-size:14px; text-transform:lowercase">
+          <button type="button" onclick="applyDiscount()"
+                  style="padding:9px 18px; border-radius:10px; background:var(--color-principal); color:#fff; border:none; font-weight:700; cursor:pointer; font-size:14px">
+            Aplicar
+          </button>
+        </div>
+        <div id="discount-msg" style="margin-top:8px; font-size:13px; display:none"></div>
+      </div>
+
       {# Notas opcionales #}
       <div class="card">
         <label style="font-size:13px; font-weight:700; color:#555">Notas adicionales (opcional)</label>
@@ -175,9 +190,10 @@
         </div>
         <div style="display:flex; justify-content:space-between; font-size:14px">
           <span>Envío a acordar con el vendedor</span>
-          <!-- <span id="shipping-display" style="color:var(--color-principal); font-weight:700">
-            {% if pre_shipping == 0 %}Gratis{% elif pre_shipping %}$ {{ pre_shipping }}{% else %}A calcular{% endif %}
-          </span> -->
+        </div>
+        <div id="discount-row" style="display:none; justify-content:space-between; font-size:14px; color:#22a06b; font-weight:700">
+          <span>🏷️ Descuento profesional (20%)</span>
+          <span>− $ <span id="discount-val">0</span></span>
         </div>
         <div style="border-top:2px solid #f0f0f0; padding-top:12px; display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800">
           <span>Total</span>
@@ -200,7 +216,40 @@
 </form>
 
 <script>
-  const subtotalVal = {{ subtotal }};
+  const subtotalVal = {{ subtotal|stringformat:"f" }};
+  const VALID_CODES = { "descuentoprofesionales20": 0.20 };
+  let appliedDiscount = 0;
+
+  function applyDiscount() {
+    const code = document.getElementById('discount-input').value.trim().toLowerCase();
+    const msg  = document.getElementById('discount-msg');
+    const rate = VALID_CODES[code];
+
+    if (rate) {
+      appliedDiscount = Math.round(subtotalVal * rate * 100) / 100;
+      const newTotal  = Math.round((subtotalVal - appliedDiscount) * 100) / 100;
+
+      document.getElementById('discount-val').textContent = appliedDiscount.toLocaleString('es-AR');
+      document.getElementById('total-val').textContent    = newTotal.toLocaleString('es-AR');
+      document.getElementById('discount-row').style.display = 'flex';
+
+      msg.style.color = '#22a06b';
+      msg.textContent = '✓ Código aplicado — 20% de descuento';
+    } else {
+      appliedDiscount = 0;
+      document.getElementById('discount-row').style.display = 'none';
+      document.getElementById('total-val').textContent = subtotalVal.toLocaleString('es-AR');
+
+      msg.style.color = '#e53935';
+      msg.textContent = 'Código inválido.';
+    }
+    msg.style.display = 'block';
+  }
+
+  // Aplicar también al presionar Enter en el campo
+  document.getElementById('discount-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); applyDiscount(); }
+  });
 
   function selectMethod(label, method) {
     document.querySelectorAll('label[onclick]').forEach(l => {

@@ -172,7 +172,7 @@ def create_mp_preference_for_purchase(purchase: Purchase):
 # ============================================================
 # MP para StoreOrder (tienda)
 # ============================================================
-def create_mp_preference_for_store_order(order: StoreOrder):
+def create_mp_preference_for_store_order(order: StoreOrder, discount_ars: Decimal = Decimal("0")):
     """
     Crea una preferencia de Mercado Pago para un StoreOrder.
     external_reference = "STORE:{order.id}" para diferenciarlo de Purchase.
@@ -198,6 +198,15 @@ def create_mp_preference_for_store_order(order: StoreOrder):
             "title": "Costo de envío",
             "quantity": 1,
             "unit_price": float(order.shipping_ars),
+            "currency_id": "ARS",
+        })
+
+    # Agregar descuento como ítem con precio negativo
+    if discount_ars and discount_ars > 0:
+        items.append({
+            "title": "Descuento profesional (20%)",
+            "quantity": 1,
+            "unit_price": -float(discount_ars),
             "currency_id": "ARS",
         })
 

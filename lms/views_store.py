@@ -237,6 +237,10 @@ def store_checkout(request):
     config     = ShippingConfig.get()
     prof       = getattr(request.user, "profile", None)
 
+    DISCOUNT_CODES = {
+        "descuentoprofesionales20": Decimal("0.20"),
+    }
+
     if request.method == "POST":
         required = ["recipient_name", "email", "address", "city", "province", "postal_code", "payment_method"]
         data     = {k: request.POST.get(k, "").strip() for k in required + ["phone", "notes"]}
@@ -247,8 +251,19 @@ def store_checkout(request):
         else:
             postal_code   = data["postal_code"]
             shipping_cost = config.calc_shipping(cart_items, postal_code)
-            subtotal      = float(_cart_totals(cart))
-            total         = subtotal + shipping_cost
+            subtotal      = Decimal(str(_cart_totals(cart)))
+            total         = subtotal + Decimal(str(shipping_cost))
+
+            # Validar código de descuento
+            discount_code = request.POST.get("discount_code", "").strip().lower()
+            discount_rate = DISCOUNT_CODES.get(discount_code, Decimal("0"))
+            discount_ars  = (subtotal * discount_rate).quantize(Decimal("0.01"))
+            total_final   = total - discount_ars
+
+            # Armar nota con descuento si aplica
+            notes = data["notes"]
+            if discount_ars > 0:
+                notes = f"[DESCUENTO PROFESIONAL 20% — ${discount_ars}]" + (f" {notes}" if notes else "")
 
             with transaction.atomic():
                 order = StoreOrder.objects.create(
@@ -262,10 +277,10 @@ def store_checkout(request):
                     city           = data["city"],
                     province       = data["province"],
                     postal_code    = postal_code,
-                    subtotal_ars   = Decimal(str(subtotal)),
+                    subtotal_ars   = subtotal,
                     shipping_ars   = Decimal(str(shipping_cost)),
-                    total_ars      = Decimal(str(total)),
-                    notes          = data["notes"],
+                    total_ars      = total_final,
+                    notes          = notes,
                 )
                 for item in cart_items:
                     StoreOrderItem.objects.create(
@@ -288,7 +303,7 @@ def store_checkout(request):
             request.session.modified = True
 
             if data["payment_method"] == "mp":
-                _, init_point = create_mp_preference_for_store_order(order)
+                _, init_point = create_mp_preference_for_store_order(order, discount_ars=discount_ars)
                 if init_point:
                     return redirect(init_point)
 
