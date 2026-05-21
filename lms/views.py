@@ -27,6 +27,8 @@ from .models import (
     Stage,
     Lesson,
     Quiz,
+    Question,
+    Choice,
     QuizAttempt,
     StageProgress,
     Bundle,
@@ -1225,6 +1227,7 @@ def course_wizard(request, course_id=None):
     })
 
 
+
 @user_passes_test(_is_staff)
 @require_POST
 def course_wizard_save(request, course_id=None):
@@ -1253,8 +1256,18 @@ def course_wizard_save(request, course_id=None):
     course.kind        = POST.get("kind", "course")
     course.description = POST.get("description", "").strip()
     course.price_ars   = int(POST.get("price_ars") or 0)
-    course.image_url   = POST.get("image_url", "").strip() or None
     course.is_active   = POST.get("is_active") == "on"
+
+    image_file = request.FILES.get("image_file")
+    if image_file:
+        ext = image_file.name.rsplit(".", 1)[-1].lower()
+        safe_name = f"courses/{slugify(title)}.{ext}"
+        saved = default_storage.save(safe_name, image_file)
+        course.image_url = default_storage.url(saved)
+    else:
+        url_input = POST.get("image_url", "").strip()
+        if url_input:
+            course.image_url = url_input
 
     # Generar slug único solo si es nuevo o si cambió el título
     base_slug = slugify(title)
@@ -1431,6 +1444,20 @@ def course_wizard_save(request, course_id=None):
     stages_to_delete = existing_stage_ids - submitted_stage_ids
     if stages_to_delete:
         Stage.objects.filter(pk__in=stages_to_delete).delete()
+
+    # ── Bundle (precio curso completo) ──
+    bundle_price = Decimal(course.price_ars or 0)
+    if bundle_price > 0:
+        bundle, _ = Bundle.objects.get_or_create(course=course, defaults={
+            "title": course.title,
+            "price_ars": bundle_price,
+        })
+        bundle.title = course.title
+        bundle.price_ars = bundle_price
+        bundle.save()
+        bundle.stages.set(course.stages.all())
+    else:
+        Bundle.objects.filter(course=course).delete()
 
     messages.success(request, f"Curso «{course.title}» guardado correctamente.")
     return redirect(reverse("lms:course_wizard_edit", args=[course.pk]))
