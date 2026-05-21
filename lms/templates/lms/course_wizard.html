@@ -162,8 +162,10 @@
                     <input type="number" name="stage_{{ forloop.counter0 }}_order" value="{{ stage.order }}" min="1">
                   </div>
                   <div class="field">
-                    <label>Precio (ARS)</label>
-                    <input type="number" name="stage_{{ forloop.counter0 }}_price" value="{{ stage.price_ars }}" min="0">
+                    <label>Precio (ARS) *</label>
+                    <input type="number" name="stage_{{ forloop.counter0 }}_price"
+                           value="{{ stage.price_ars|floatformat:0 }}"
+                           min="0" step="1" required placeholder="Ej: 1500">
                   </div>
                 </div>
                 <div class="field-row single">
@@ -377,7 +379,8 @@
           </div>
           <div class="field">
             <label>Precio (ARS)</label>
-            <input type="number" name="stage_${idx}_price" value="0" min="0">
+            <input type="number" name="stage_${idx}_price"
+                           value="" min="0" step="1" required placeholder="Ej: 1500">
           </div>
         </div>
         <div class="field-row single">

@@ -1308,7 +1308,7 @@ def course_wizard_save(request, course_id=None):
 
         stage.title     = stage_title
         stage.order     = int(POST.get(f"stage_{n}_order") or n + 1)
-        stage.price_ars = Decimal(POST.get(f"stage_{n}_price") or "0")
+        stage.price_ars = Decimal(int(POST.get(f"stage_{n}_price") or 0))
         stage.pdf_url   = POST.get(f"stage_{n}_pdf", "").strip()
 
         # Generar slug de etapa único dentro del curso
