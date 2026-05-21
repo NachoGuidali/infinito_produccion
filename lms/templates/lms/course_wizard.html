@@ -290,24 +290,27 @@
         {% endif %}
       </div>
 
-      {# Botones de acción #}
+      {# Botón guardar #}
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
         <button type="submit" class="btn" style="padding:12px 28px;font-size:1rem">
           💾 Guardar curso
         </button>
-        {% if course %}
-        <form method="post" action="{% url 'lms:course_wizard_delete' course.id %}"
-              onsubmit="return confirm('¿Seguro que querés eliminar «{{ course.title }}»? Esta acción no se puede deshacer.')"
-              style="margin:0">
-          {% csrf_token %}
-          <button type="submit" style="padding:12px 20px;border-radius:999px;border:2px solid #ffd6dc;background:#ffeff1;color:#b30b2a;font-weight:700;cursor:pointer;font-size:14px">
-            🗑 Eliminar curso
-          </button>
-        </form>
-        {% endif %}
       </div>
 
     </form>
+
+    {# Botón eliminar — FUERA del form de guardar para evitar form anidado #}
+    {% if course %}
+    <form method="post" action="{% url 'lms:course_wizard_delete' course.id %}"
+          onsubmit="return confirm('¿Seguro que querés eliminar «{{ course.title }}»? Esta acción no se puede deshacer.')"
+          style="margin-top:12px">
+      {% csrf_token %}
+      <button type="submit" style="padding:12px 20px;border-radius:999px;border:2px solid #ffd6dc;background:#ffeff1;color:#b30b2a;font-weight:700;cursor:pointer;font-size:14px">
+        🗑 Eliminar curso
+      </button>
+    </form>
+    {% endif %}
+
   </div>
 </div>
 
