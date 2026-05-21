@@ -1203,3 +1203,244 @@ def admin_user_detail(request, user_id: int):
             "progresses": progresses,
         },
     )
+
+
+# ─── WIZARD CURSOS ────────────────────────────────────────────────────────────
+
+@user_passes_test(_is_staff)
+def course_wizard(request, course_id=None):
+    """
+    Muestra el wizard para crear o editar un curso completo
+    (Course + Stages + Lessons por etapa).
+    """
+    course = None
+    if course_id:
+        course = get_object_or_404(Course, pk=course_id)
+
+    courses_list = Course.objects.prefetch_related("stages__lessons").order_by("title")
+
+    return render(request, "lms/course_wizard.html", {
+        "course": course,
+        "courses_list": courses_list,
+    })
+
+
+@user_passes_test(_is_staff)
+@require_POST
+def course_wizard_save(request, course_id=None):
+    """
+    Guarda Course + Stages + Lessons desde el wizard en un solo POST.
+    Datos esperados (todos como campos del form):
+      - title, kind, description, price_ars, image_url, is_active
+      - stage_N_title, stage_N_order, stage_N_price, stage_N_pdf  (N = 0,1,2...)
+      - stage_N_lesson_M_title, stage_N_lesson_M_youtube, stage_N_lesson_M_pdf, stage_N_lesson_M_order
+    Si course_id es provisto, edita el curso existente.
+    """
+    POST = request.POST
+
+    # ── Course ──
+    title = POST.get("title", "").strip()
+    if not title:
+        messages.error(request, "El título del curso es obligatorio.")
+        return redirect(reverse("lms:course_wizard_edit", args=[course_id]) if course_id else reverse("lms:course_wizard"))
+
+    if course_id:
+        course = get_object_or_404(Course, pk=course_id)
+    else:
+        course = Course()
+
+    course.title       = title
+    course.kind        = POST.get("kind", "course")
+    course.description = POST.get("description", "").strip()
+    course.price_ars   = int(POST.get("price_ars") or 0)
+    course.image_url   = POST.get("image_url", "").strip() or None
+    course.is_active   = POST.get("is_active") == "on"
+
+    # Generar slug único solo si es nuevo o si cambió el título
+    base_slug = slugify(title)
+    if not course_id:
+        slug = base_slug
+        suffix = 1
+        while Course.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+        course.slug = slug
+
+    course.save()
+
+    # ── Stages ──
+    # Recopilar índices de etapas enviadas (stage_0_title, stage_1_title, ...)
+    stage_indices = sorted({
+        int(k.split("_")[1])
+        for k in POST.keys()
+        if k.startswith("stage_") and k.split("_")[2] == "title"
+    })
+
+    existing_stage_ids = set(course.stages.values_list("id", flat=True))
+    submitted_stage_ids = set()
+
+    for n in stage_indices:
+        stage_title = POST.get(f"stage_{n}_title", "").strip()
+        if not stage_title:
+            continue
+
+        stage_id = POST.get(f"stage_{n}_id", "").strip()
+        if stage_id:
+            try:
+                stage = Stage.objects.get(pk=int(stage_id), course=course)
+            except Stage.DoesNotExist:
+                stage = Stage(course=course)
+        else:
+            stage = Stage(course=course)
+
+        stage.title     = stage_title
+        stage.order     = int(POST.get(f"stage_{n}_order") or n + 1)
+        stage.price_ars = Decimal(POST.get(f"stage_{n}_price") or "0")
+        stage.pdf_url   = POST.get(f"stage_{n}_pdf", "").strip()
+
+        # Generar slug de etapa único dentro del curso
+        stage_base_slug = slugify(stage_title)
+        if not stage.pk:
+            st_slug = stage_base_slug
+            st_suffix = 1
+            while Stage.objects.filter(course=course, slug=st_slug).exists():
+                st_slug = f"{stage_base_slug}-{st_suffix}"
+                st_suffix += 1
+            stage.slug = st_slug
+
+        stage.save()
+        submitted_stage_ids.add(stage.pk)
+
+        # ── Lessons de esta etapa ──
+        lesson_indices = sorted({
+            int(k.split("_")[3])
+            for k in POST.keys()
+            if k.startswith(f"stage_{n}_lesson_") and k.split("_")[4] == "title"
+        })
+
+        existing_lesson_ids = set(stage.lessons.values_list("id", flat=True))
+        submitted_lesson_ids = set()
+
+        for m in lesson_indices:
+            lesson_title = POST.get(f"stage_{n}_lesson_{m}_title", "").strip()
+            if not lesson_title:
+                continue
+
+            lesson_id = POST.get(f"stage_{n}_lesson_{m}_id", "").strip()
+            if lesson_id:
+                try:
+                    lesson = Lesson.objects.get(pk=int(lesson_id), stage=stage)
+                except Lesson.DoesNotExist:
+                    lesson = Lesson(stage=stage)
+            else:
+                lesson = Lesson(stage=stage)
+
+            lesson.title       = lesson_title
+            lesson.youtube_url = POST.get(f"stage_{n}_lesson_{m}_youtube", "").strip()
+            lesson.pdf_url     = POST.get(f"stage_{n}_lesson_{m}_pdf", "").strip()
+            lesson.order       = int(POST.get(f"stage_{n}_lesson_{m}_order") or m + 1)
+            lesson.save()
+            submitted_lesson_ids.add(lesson.pk)
+
+        # Borrar lecciones eliminadas en el wizard
+        lessons_to_delete = existing_lesson_ids - submitted_lesson_ids
+        if lessons_to_delete:
+            Lesson.objects.filter(pk__in=lessons_to_delete).delete()
+
+        # ── Quiz / Examen de esta etapa ──
+        has_quiz = POST.get(f"stage_{n}_has_quiz") == "on"
+
+        if has_quiz:
+            quiz, _ = Quiz.objects.get_or_create(stage=stage)
+            quiz.passing_score = int(POST.get(f"stage_{n}_quiz_passing_score") or 80)
+            quiz.max_attempts  = int(POST.get(f"stage_{n}_quiz_max_attempts") or 0)
+            quiz.save()
+
+            # Preguntas
+            question_indices = sorted({
+                int(k.split("_")[4])
+                for k in POST.keys()
+                if k.startswith(f"stage_{n}_quiz_question_") and len(k.split("_")) > 5 and k.split("_")[5] == "text"
+            })
+
+            existing_question_ids = set(quiz.questions.values_list("id", flat=True))
+            submitted_question_ids = set()
+
+            for qi in question_indices:
+                q_text = POST.get(f"stage_{n}_quiz_question_{qi}_text", "").strip()
+                if not q_text:
+                    continue
+
+                q_id = POST.get(f"stage_{n}_quiz_question_{qi}_id", "").strip()
+                if q_id:
+                    try:
+                        question = Question.objects.get(pk=int(q_id), quiz=quiz)
+                    except Question.DoesNotExist:
+                        question = Question(quiz=quiz)
+                else:
+                    question = Question(quiz=quiz)
+
+                question.text = q_text
+                question.save()
+                submitted_question_ids.add(question.pk)
+
+                # Opciones de respuesta
+                choice_indices = sorted({
+                    int(k.split("_")[6])
+                    for k in POST.keys()
+                    if k.startswith(f"stage_{n}_quiz_question_{qi}_choice_") and len(k.split("_")) > 7 and k.split("_")[7] == "text"
+                })
+
+                existing_choice_ids = set(question.choices.values_list("id", flat=True))
+                submitted_choice_ids = set()
+
+                for ci in choice_indices:
+                    c_text = POST.get(f"stage_{n}_quiz_question_{qi}_choice_{ci}_text", "").strip()
+                    if not c_text:
+                        continue
+
+                    c_id = POST.get(f"stage_{n}_quiz_question_{qi}_choice_{ci}_id", "").strip()
+                    if c_id:
+                        try:
+                            choice = Choice.objects.get(pk=int(c_id), question=question)
+                        except Choice.DoesNotExist:
+                            choice = Choice(question=question)
+                    else:
+                        choice = Choice(question=question)
+
+                    choice.text       = c_text
+                    choice.is_correct = POST.get(f"stage_{n}_quiz_question_{qi}_choice_{ci}_correct") == "on"
+                    choice.save()
+                    submitted_choice_ids.add(choice.pk)
+
+                # Borrar opciones eliminadas
+                choices_to_delete = existing_choice_ids - submitted_choice_ids
+                if choices_to_delete:
+                    Choice.objects.filter(pk__in=choices_to_delete).delete()
+
+            # Borrar preguntas eliminadas
+            questions_to_delete = existing_question_ids - submitted_question_ids
+            if questions_to_delete:
+                Question.objects.filter(pk__in=questions_to_delete).delete()
+
+        else:
+            # Si desactivaron el examen, lo eliminamos
+            Quiz.objects.filter(stage=stage).delete()
+
+    # Borrar etapas eliminadas en el wizard
+    stages_to_delete = existing_stage_ids - submitted_stage_ids
+    if stages_to_delete:
+        Stage.objects.filter(pk__in=stages_to_delete).delete()
+
+    messages.success(request, f"Curso «{course.title}» guardado correctamente.")
+    return redirect(reverse("lms:course_wizard_edit", args=[course.pk]))
+
+
+@user_passes_test(_is_staff)
+@require_POST
+def course_wizard_delete(request, course_id):
+    course = get_object_or_404(Course, pk=course_id)
+    title = course.title
+    course.delete()
+    messages.success(request, f"Curso «{title}» eliminado.")
+    return redirect(reverse("lms:course_wizard"))

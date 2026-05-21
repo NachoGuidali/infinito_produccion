@@ -27,9 +27,14 @@
 
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap">
   <h1 style="margin:0">Panel administrativo</h1>
-  <a href="{% url 'lms:store_admin' %}" class="btn" style="gap:6px;display:inline-flex;align-items:center">
-    🛍️ Panel tienda
-  </a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <a href="{% url 'lms:course_wizard' %}" class="btn btn-outline" style="gap:6px;display:inline-flex;align-items:center">
+      📚 Cursos y capacitaciones
+    </a>
+    <a href="{% url 'lms:store_admin' %}" class="btn" style="gap:6px;display:inline-flex;align-items:center">
+      🛍️ Panel tienda
+    </a>
+  </div>
 </div>
 
 {# KPIs desde summary.* que trae la vista #}

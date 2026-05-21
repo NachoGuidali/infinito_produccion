@@ -1,0 +1,498 @@
+{% extends "lms/base.html" %}
+{% block title %}Wizard de cursos — Infinito{% endblock %}
+{% block content %}
+<style>
+  .wiz-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+  .wiz-sidebar { position: sticky; top: 80px; }
+  .course-list-item { display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-radius: 10px; border: 1px solid #e9e9e9; background: #fff;
+    margin-bottom: 6px; font-size: 13px; gap: 8px; }
+  .course-list-item:hover { border-color: var(--color-principal); }
+  .course-list-item.active { border-color: var(--color-principal); background: #fff0fa; }
+  .stage-block { border: 2px solid #e9e9e9; border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+  .stage-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    background: #f9f0ff; cursor: pointer; user-select: none; }
+  .stage-header:hover { background: #f3e6ff; }
+  .stage-body { padding: 16px; display: none; }
+  .stage-body.open { display: block; }
+  .lesson-block { border: 1px solid #e9e9e9; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .field-row.single { grid-template-columns: 1fr; }
+  .field label { font-size: 12px; font-weight: 700; color: #555; display: block; margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 8px 12px; border: 2px solid #e9e9e9; border-radius: 8px;
+    font-size: 13px; background: #fff; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--color-principal); outline: none; }
+  .btn-add { background: #fff; border: 2px dashed #d9b8f5; color: #8a2b8f;
+    border-radius: 10px; padding: 8px 16px; font-weight: 700; font-size: 13px;
+    cursor: pointer; width: 100%; margin-top: 8px; }
+  .btn-add:hover { background: #fdf0ff; }
+  .btn-remove { background: #ffeff1; color: #b30b2a; border: none; border-radius: 8px;
+    padding: 4px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-remove:hover { background: #ffd6dc; }
+  .toggle-arrow { transition: transform .2s; display: inline-block; }
+  .toggle-arrow.open { transform: rotate(90deg); }
+  @media (max-width: 768px) { .wiz-layout { grid-template-columns: 1fr; } .field-row { grid-template-columns: 1fr; } }
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+  <div>
+    <h1 style="margin:0">📚 Wizard de cursos</h1>
+    <p style="margin:4px 0 0;color:#888;font-size:14px">Creá y editá cursos, etapas y clases desde un solo lugar</p>
+  </div>
+  <a href="{% url 'lms:admin_panel' %}" class="btn btn-outline">← Panel admin</a>
+</div>
+
+<div class="wiz-layout">
+
+  {# ── Sidebar: lista de cursos ── #}
+  <div class="wiz-sidebar">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <strong style="font-size:14px">Cursos existentes</strong>
+        <a href="{% url 'lms:course_wizard' %}" class="btn" style="font-size:12px;padding:6px 12px">+ Nuevo</a>
+      </div>
+
+      {% for c in courses_list %}
+        <div class="course-list-item {% if course and course.id == c.id %}active{% endif %}">
+          <div style="overflow:hidden">
+            <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</div>
+            <div style="color:#888;font-size:11px">{{ c.get_kind_display }} · {{ c.stages.count }} etapas</div>
+          </div>
+          <a href="{% url 'lms:course_wizard_edit' c.id %}"
+             style="flex-shrink:0;font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid #e9e9e9;background:#fff">
+            Editar
+          </a>
+        </div>
+      {% empty %}
+        <p style="color:#888;font-size:13px;text-align:center;padding:16px 0">Todavía no hay cursos.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Formulario principal ── #}
+  <div>
+    <form method="post"
+          action="{% if course %}{% url 'lms:course_wizard_save_edit' course.id %}{% else %}{% url 'lms:course_wizard_save' %}{% endif %}">
+      {% csrf_token %}
+
+      {# Datos del curso #}
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="margin:0 0 16px;font-size:1.05rem">
+          {% if course %}✏️ Editando: {{ course.title }}{% else %}🆕 Nuevo curso{% endif %}
+        </h2>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Título *</label>
+            <input type="text" name="title" value="{{ course.title|default:'' }}" required placeholder="Ej: Cosmetología Avanzada">
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select name="kind">
+              <option value="course" {% if not course or course.kind == 'course' %}selected{% endif %}>Curso</option>
+              <option value="training" {% if course and course.kind == 'training' %}selected{% endif %}>Capacitación</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field-row single">
+          <div class="field">
+            <label>Descripción</label>
+            <textarea name="description" rows="2" placeholder="Descripción breve del curso...">{{ course.description|default:'' }}</textarea>
+          </div>
+        </div>
+
+        <div class="field-row triple">
+          <div class="field">
+            <label>Precio general (ARS)</label>
+            <input type="number" name="price_ars" value="{{ course.price_ars|default:0 }}" min="0">
+          </div>
+          <div class="field">
+            <label>URL de imagen</label>
+            <input type="url" name="image_url" value="{{ course.image_url|default:'' }}" placeholder="https://...">
+          </div>
+          <div class="field" style="justify-content:flex-end;padding-top:18px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" name="is_active" {% if not course or course.is_active %}checked{% endif %}
+                     style="width:16px;height:16px;accent-color:var(--color-principal)">
+              Curso activo (visible)
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {# Etapas #}
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h2 style="margin:0;font-size:1.05rem">📋 Etapas</h2>
+          <button type="button" class="btn" style="font-size:13px;padding:7px 14px" onclick="addStage()">+ Agregar etapa</button>
+        </div>
+
+        <div id="stages-container">
+          {% if course %}
+            {% for stage in course.stages.all %}
+            <div class="stage-block" data-stage-index="{{ forloop.counter0 }}">
+              <input type="hidden" name="stage_{{ forloop.counter0 }}_id" value="{{ stage.id }}">
+              <div class="stage-header" onclick="toggleStage(this)">
+                <span class="toggle-arrow open">▶</span>
+                <strong style="flex:1">Etapa {{ stage.order }}: {{ stage.title }}</strong>
+                <span style="font-size:12px;color:#888">{{ stage.lessons.count }} clase(s)</span>
+                <button type="button" class="btn-remove" onclick="event.stopPropagation();removeBlock(this.closest('.stage-block'))">✕ Eliminar</button>
+              </div>
+              <div class="stage-body open">
+                <div class="field-row triple">
+                  <div class="field">
+                    <label>Título de la etapa *</label>
+                    <input type="text" name="stage_{{ forloop.counter0 }}_title" value="{{ stage.title }}" required>
+                  </div>
+                  <div class="field">
+                    <label>Orden</label>
+                    <input type="number" name="stage_{{ forloop.counter0 }}_order" value="{{ stage.order }}" min="1">
+                  </div>
+                  <div class="field">
+                    <label>Precio (ARS)</label>
+                    <input type="number" name="stage_{{ forloop.counter0 }}_price" value="{{ stage.price_ars }}" min="0">
+                  </div>
+                </div>
+                <div class="field-row single">
+                  <div class="field">
+                    <label>URL PDF general de la etapa (opcional)</label>
+                    <input type="url" name="stage_{{ forloop.counter0 }}_pdf" value="{{ stage.pdf_url }}" placeholder="https://drive.google.com/...">
+                  </div>
+                </div>
+
+                {# Clases #}
+                <div style="margin-top:12px">
+                  <strong style="font-size:13px">🎬 Clases</strong>
+                  <div class="lessons-container" style="margin-top:10px">
+                    {% for lesson in stage.lessons.all %}
+                    <div class="lesson-block">
+                      <input type="hidden" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_id" value="{{ lesson.id }}">
+                      <div class="field-row triple">
+                        <div class="field">
+                          <label>Título de la clase *</label>
+                          <input type="text" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_title" value="{{ lesson.title }}" required>
+                        </div>
+                        <div class="field">
+                          <label>Orden</label>
+                          <input type="number" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_order" value="{{ lesson.order }}" min="1">
+                        </div>
+                        <div class="field" style="justify-content:flex-end;padding-top:18px">
+                          <button type="button" class="btn-remove" onclick="removeBlock(this.closest('.lesson-block'))">✕ Eliminar clase</button>
+                        </div>
+                      </div>
+                      <div class="field-row">
+                        <div class="field">
+                          <label>URL YouTube (embed o watch)</label>
+                          <input type="url" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_youtube" value="{{ lesson.youtube_url }}" placeholder="https://www.youtube.com/watch?v=...">
+                        </div>
+                        <div class="field">
+                          <label>URL PDF de la clase (opcional)</label>
+                          <input type="url" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_pdf" value="{{ lesson.pdf_url }}" placeholder="https://drive.google.com/...">
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  <button type="button" class="btn-add" onclick="addLesson(this)">+ Agregar clase</button>
+                </div>
+
+                {# Examen #}
+                {% with si=forloop.counter0 quiz=stage.quiz %}
+                <div style="margin-top:16px;border-top:1px dashed #e0d0f5;padding-top:14px">
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:14px">
+                    <input type="checkbox" name="stage_{{ si }}_has_quiz"
+                           {% if quiz %}checked{% endif %}
+                           onchange="toggleQuiz(this)"
+                           style="width:16px;height:16px;accent-color:var(--color-principal)">
+                    📝 Esta etapa tiene examen
+                  </label>
+
+                  <div class="quiz-block" style="margin-top:12px;{% if not quiz %}display:none{% endif %}">
+                    <div class="field-row" style="margin-bottom:12px">
+                      <div class="field">
+                        <label>Puntaje mínimo para aprobar (%)</label>
+                        <input type="number" name="stage_{{ si }}_quiz_passing_score"
+                               value="{{ quiz.passing_score|default:80 }}" min="1" max="100">
+                      </div>
+                      <div class="field">
+                        <label>Máximo de intentos (0 = ilimitado)</label>
+                        <input type="number" name="stage_{{ si }}_quiz_max_attempts"
+                               value="{{ quiz.max_attempts|default:0 }}" min="0">
+                      </div>
+                    </div>
+
+                    <strong style="font-size:13px">❓ Preguntas</strong>
+                    <div class="questions-container" style="margin-top:10px">
+                      {% if quiz %}
+                        {% for question in quiz.questions.all %}
+                        <div class="question-block" style="border:1px solid #e0d0f5;border-radius:10px;padding:12px;margin-bottom:10px;background:#fdf8ff">
+                          <input type="hidden" name="stage_{{ si }}_quiz_question_{{ forloop.counter0 }}_id" value="{{ question.id }}">
+                          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+                            <div class="field" style="flex:1">
+                              <label>Pregunta {{ forloop.counter }}</label>
+                              <input type="text" name="stage_{{ si }}_quiz_question_{{ forloop.counter0 }}_text"
+                                     value="{{ question.text }}" required placeholder="Escribí la pregunta...">
+                            </div>
+                            <button type="button" class="btn-remove" style="margin-top:18px"
+                                    onclick="removeBlock(this.closest('.question-block'))">✕</button>
+                          </div>
+                          <div class="choices-container">
+                            {% for choice in question.choices.all %}
+                            <div class="choice-block" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                              <input type="hidden" name="stage_{{ si }}_quiz_question_{{ forloop.parentloop.counter0 }}_choice_{{ forloop.counter0 }}_id" value="{{ choice.id }}">
+                              <input type="text" name="stage_{{ si }}_quiz_question_{{ forloop.parentloop.counter0 }}_choice_{{ forloop.counter0 }}_text"
+                                     value="{{ choice.text }}" required placeholder="Opción..."
+                                     style="flex:1;padding:7px 10px;border:2px solid #e9e9e9;border-radius:8px;font-size:13px">
+                              <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;cursor:pointer">
+                                <input type="checkbox" name="stage_{{ si }}_quiz_question_{{ forloop.parentloop.counter0 }}_choice_{{ forloop.counter0 }}_correct"
+                                       {% if choice.is_correct %}checked{% endif %}
+                                       style="accent-color:#22a06b">
+                                Correcta
+                              </label>
+                              <button type="button" class="btn-remove" onclick="removeBlock(this.closest('.choice-block'))">✕</button>
+                            </div>
+                            {% endfor %}
+                          </div>
+                          <button type="button" class="btn-add" style="margin-top:6px"
+                                  onclick="addChoice(this, {{ si }}, {{ forloop.counter0 }})">+ Agregar opción</button>
+                        </div>
+                        {% endfor %}
+                      {% endif %}
+                    </div>
+                    <button type="button" class="btn-add" onclick="addQuestion(this, {{ si }})">+ Agregar pregunta</button>
+                  </div>
+                </div>
+                {% endwith %}
+
+              </div>
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        {% if not course %}
+          <p id="no-stages-msg" style="text-align:center;color:#aaa;font-size:13px;padding:20px 0">
+            Guardá el curso primero o agregá etapas aquí para crearlas junto con él.
+          </p>
+        {% endif %}
+      </div>
+
+      {# Botones de acción #}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+        <button type="submit" class="btn" style="padding:12px 28px;font-size:1rem">
+          💾 Guardar curso
+        </button>
+        {% if course %}
+        <form method="post" action="{% url 'lms:course_wizard_delete' course.id %}"
+              onsubmit="return confirm('¿Seguro que querés eliminar «{{ course.title }}»? Esta acción no se puede deshacer.')"
+              style="margin:0">
+          {% csrf_token %}
+          <button type="submit" style="padding:12px 20px;border-radius:999px;border:2px solid #ffd6dc;background:#ffeff1;color:#b30b2a;font-weight:700;cursor:pointer;font-size:14px">
+            🗑 Eliminar curso
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+  // Contador global para índices únicos
+  let stageCounter = {{ course.stages.count|default:0 }};
+
+  function toggleStage(header) {
+    const body  = header.nextElementSibling;
+    const arrow = header.querySelector('.toggle-arrow');
+    const isOpen = body.classList.toggle('open');
+    arrow.classList.toggle('open', isOpen);
+  }
+
+  function removeBlock(el) {
+    el.remove();
+    renumberStages();
+  }
+
+  function renumberStages() {
+    document.querySelectorAll('#stages-container .stage-block').forEach((block, si) => {
+      block.dataset.stageIndex = si;
+      // Renombrar campos de etapa
+      block.querySelectorAll('[name^="stage_"]').forEach(input => {
+        const name = input.getAttribute('name');
+        // stage_OLD_xxx o stage_OLD_lesson_OLD_xxx
+        input.setAttribute('name', name.replace(/^stage_\d+/, `stage_${si}`)
+                                       .replace(/lesson_\d+/, m => m)); // lessons se renombran abajo
+      });
+      // Renombrar campos de lecciones
+      block.querySelectorAll('.lesson-block').forEach((lb, li) => {
+        lb.querySelectorAll('[name]').forEach(input => {
+          const name = input.getAttribute('name');
+          input.setAttribute('name', name.replace(/^stage_\d+_lesson_\d+/, `stage_${si}_lesson_${li}`));
+        });
+      });
+    });
+  }
+
+  function addStage() {
+    const idx = stageCounter++;
+    const noMsg = document.getElementById('no-stages-msg');
+    if (noMsg) noMsg.remove();
+
+    const stageCount = document.querySelectorAll('#stages-container .stage-block').length + 1;
+
+    const html = `
+    <div class="stage-block" data-stage-index="${idx}">
+      <div class="stage-header" onclick="toggleStage(this)">
+        <span class="toggle-arrow open">▶</span>
+        <strong style="flex:1">Etapa ${stageCount}: Nueva etapa</strong>
+        <button type="button" class="btn-remove" onclick="event.stopPropagation();removeBlock(this.closest('.stage-block'))">✕ Eliminar</button>
+      </div>
+      <div class="stage-body open">
+        <div class="field-row triple">
+          <div class="field">
+            <label>Título de la etapa *</label>
+            <input type="text" name="stage_${idx}_title" required placeholder="Ej: Introducción"
+                   oninput="this.closest('.stage-block').querySelector('strong').textContent = 'Etapa ${stageCount}: ' + (this.value||'Nueva etapa')">
+          </div>
+          <div class="field">
+            <label>Orden</label>
+            <input type="number" name="stage_${idx}_order" value="${stageCount}" min="1">
+          </div>
+          <div class="field">
+            <label>Precio (ARS)</label>
+            <input type="number" name="stage_${idx}_price" value="0" min="0">
+          </div>
+        </div>
+        <div class="field-row single">
+          <div class="field">
+            <label>URL PDF general de la etapa (opcional)</label>
+            <input type="url" name="stage_${idx}_pdf" placeholder="https://drive.google.com/...">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <strong style="font-size:13px">🎬 Clases</strong>
+          <div class="lessons-container" style="margin-top:10px"></div>
+          <button type="button" class="btn-add" onclick="addLesson(this)">+ Agregar clase</button>
+        </div>
+
+        <div style="margin-top:16px;border-top:1px dashed #e0d0f5;padding-top:14px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:14px">
+            <input type="checkbox" name="stage_${idx}_has_quiz"
+                   onchange="toggleQuiz(this)"
+                   style="width:16px;height:16px;accent-color:var(--color-principal)">
+            📝 Esta etapa tiene examen
+          </label>
+          <div class="quiz-block" style="margin-top:12px;display:none">
+            <div class="field-row" style="margin-bottom:12px">
+              <div class="field">
+                <label>Puntaje mínimo para aprobar (%)</label>
+                <input type="number" name="stage_${idx}_quiz_passing_score" value="80" min="1" max="100">
+              </div>
+              <div class="field">
+                <label>Máximo de intentos (0 = ilimitado)</label>
+                <input type="number" name="stage_${idx}_quiz_max_attempts" value="0" min="0">
+              </div>
+            </div>
+            <strong style="font-size:13px">❓ Preguntas</strong>
+            <div class="questions-container" style="margin-top:10px"></div>
+            <button type="button" class="btn-add" onclick="addQuestion(this, ${idx})">+ Agregar pregunta</button>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+    document.getElementById('stages-container').insertAdjacentHTML('beforeend', html);
+  }
+
+  function addLesson(btn) {
+    const stageBlock    = btn.closest('.stage-block');
+    const si            = stageBlock.dataset.stageIndex;
+    const container     = stageBlock.querySelector('.lessons-container');
+    const li            = container.querySelectorAll('.lesson-block').length;
+    const lessonNum     = li + 1;
+
+    const html = `
+    <div class="lesson-block">
+      <div class="field-row triple">
+        <div class="field">
+          <label>Título de la clase *</label>
+          <input type="text" name="stage_${si}_lesson_${li}_title" required placeholder="Ej: Clase 1 — Introducción">
+        </div>
+        <div class="field">
+          <label>Orden</label>
+          <input type="number" name="stage_${si}_lesson_${li}_order" value="${lessonNum}" min="1">
+        </div>
+        <div class="field" style="justify-content:flex-end;padding-top:18px">
+          <button type="button" class="btn-remove" onclick="removeBlock(this.closest('.lesson-block'))">✕ Eliminar clase</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>URL YouTube (embed o watch)</label>
+          <input type="url" name="stage_${si}_lesson_${li}_youtube" placeholder="https://www.youtube.com/watch?v=...">
+        </div>
+        <div class="field">
+          <label>URL PDF de la clase (opcional)</label>
+          <input type="url" name="stage_${si}_lesson_${li}_pdf" placeholder="https://drive.google.com/...">
+        </div>
+      </div>
+    </div>`;
+
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  function toggleQuiz(checkbox) {
+    const quizBlock = checkbox.closest('label').nextElementSibling;
+    quizBlock.style.display = checkbox.checked ? 'block' : 'none';
+  }
+
+  function addQuestion(btn, si) {
+    const container = btn.previousElementSibling;
+    const qi = container.querySelectorAll('.question-block').length;
+    const qNum = qi + 1;
+
+    const html = `
+    <div class="question-block" style="border:1px solid #e0d0f5;border-radius:10px;padding:12px;margin-bottom:10px;background:#fdf8ff">
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+        <div class="field" style="flex:1">
+          <label>Pregunta ${qNum}</label>
+          <input type="text" name="stage_${si}_quiz_question_${qi}_text" required placeholder="Escribí la pregunta...">
+        </div>
+        <button type="button" class="btn-remove" style="margin-top:18px"
+                onclick="removeBlock(this.closest('.question-block'))">✕</button>
+      </div>
+      <div class="choices-container"></div>
+      <button type="button" class="btn-add" style="margin-top:6px"
+              onclick="addChoice(this, ${si}, ${qi})">+ Agregar opción</button>
+    </div>`;
+
+    container.insertAdjacentHTML('beforeend', html);
+  }
+
+  function addChoice(btn, si, qi) {
+    const container = btn.previousElementSibling;
+    const ci = container.querySelectorAll('.choice-block').length;
+
+    const html = `
+    <div class="choice-block" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <input type="text" name="stage_${si}_quiz_question_${qi}_choice_${ci}_text"
+             required placeholder="Opción..."
+             style="flex:1;padding:7px 10px;border:2px solid #e9e9e9;border-radius:8px;font-size:13px">
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;cursor:pointer">
+        <input type="checkbox" name="stage_${si}_quiz_question_${qi}_choice_${ci}_correct"
+               style="accent-color:#22a06b">
+        Correcta
+      </label>
+      <button type="button" class="btn-remove" onclick="removeBlock(this.closest('.choice-block'))">✕</button>
+    </div>`;
+
+    container.insertAdjacentHTML('beforeend', html);
+  }
+</script>
+{% endblock %}

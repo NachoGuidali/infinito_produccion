@@ -63,6 +63,14 @@ urlpatterns = [
 
     # Panel admin "ligero" (ruta principal)
     path("panel-admin/", views.admin_panel, name="admin_panel"),
+
+    # Wizard de cursos
+    path("panel-admin/cursos/", views.course_wizard, name="course_wizard"),
+    path("panel-admin/cursos/nuevo/guardar/", views.course_wizard_save, name="course_wizard_save"),
+    path("panel-admin/cursos/<int:course_id>/", views.course_wizard, name="course_wizard_edit"),
+    path("panel-admin/cursos/<int:course_id>/guardar/", views.course_wizard_save, name="course_wizard_save_edit"),
+    path("panel-admin/cursos/<int:course_id>/eliminar/", views.course_wizard_delete, name="course_wizard_delete"),
+
     path(
         "panel-admin/pedido/<int:purchase_id>/estado/",
         views.admin_order_status,
