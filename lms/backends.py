@@ -14,14 +14,12 @@ class EmailOrUsernameBackend(ModelBackend):
         if not identifier or not password:
             return None
 
-        try:
-            user = UserModel.objects.get(
-                Q(username__iexact=identifier) | Q(email__iexact=identifier)
-            )
-        except UserModel.DoesNotExist:
-            return None
+        users = UserModel.objects.filter(
+            Q(username__iexact=identifier) | Q(email__iexact=identifier)
+        )
 
-        if user.check_password(password) and self.user_can_authenticate(user):
-            return user
+        for user in users:
+            if user.check_password(password) and self.user_can_authenticate(user):
+                return user
 
         return None
