@@ -424,6 +424,7 @@ class StoreOrder(TimeStamped):
     # Montos
     subtotal_ars    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     shipping_ars    = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_ars    = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_ars       = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     # Tracking

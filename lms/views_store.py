@@ -237,10 +237,6 @@ def store_checkout(request):
     config     = ShippingConfig.get()
     prof       = getattr(request.user, "profile", None)
 
-    DISCOUNT_CODES = {
-        "descuentoprofesionales20": Decimal("0.20"),
-    }
-
     if request.method == "POST":
         required = ["recipient_name", "email", "address", "city", "province", "postal_code", "payment_method"]
         data     = {k: request.POST.get(k, "").strip() for k in required + ["phone", "notes"]}
@@ -279,6 +275,7 @@ def store_checkout(request):
                     postal_code    = postal_code,
                     subtotal_ars   = subtotal,
                     shipping_ars   = Decimal(str(shipping_cost)),
+                    discount_ars   = discount_ars,
                     total_ars      = total_final,
                     notes          = notes,
                 )
@@ -377,24 +374,64 @@ def store_my_orders(request):
     return render(request, "lms/store/my_orders_tienda.html", {"orders": orders})
 
 
+DISCOUNT_CODES = {
+    "descuentoprofesionales20": Decimal("0.20"),
+}
+
 @login_required
 def store_order_pay(request, order_id):
-    """
-    Genera una nueva preferencia de MP para un pedido pendiente y redirige al pago.
-    Sirve para cuando el usuario volvió atrás sin completar el pago.
-    """
     order = get_object_or_404(StoreOrder, id=order_id, user=request.user)
 
-    if order.status != "pending" or order.payment_method != "mp":
-        messages.warning(request, "Este pedido no puede ser pagado con Mercado Pago.")
+    if order.status != "pending":
+        messages.info(request, "Este pedido ya fue procesado.")
         return redirect(reverse("lms:store_my_orders"))
 
-    _, init_point = create_mp_preference_for_store_order(order)
-    if init_point:
-        return redirect(init_point)
+    if request.method == "POST":
+        action = request.POST.get("action")
 
-    messages.error(request, "No se pudo generar el link de pago. Intentá de nuevo más tarde.")
-    return redirect(reverse("lms:store_my_orders"))
+        if action == "apply_discount":
+            code = request.POST.get("discount_code", "").strip().lower()
+            rate = DISCOUNT_CODES.get(code)
+            if not rate:
+                messages.error(request, "Código de descuento inválido.")
+            elif order.discount_ars > 0:
+                messages.info(request, "Ya tiene un descuento aplicado.")
+            else:
+                discount = (order.subtotal_ars * rate).quantize(Decimal("0.01"))
+                order.discount_ars = discount
+                order.total_ars    = order.subtotal_ars + order.shipping_ars - discount
+                order.notes        = f"[DESCUENTO PROFESIONAL 20% — ${discount}]" + (f" {order.notes}" if order.notes else "")
+                order.save(update_fields=["discount_ars", "total_ars", "notes"])
+                messages.success(request, f"Descuento de ${discount} aplicado.")
+            return redirect(reverse("lms:store_order_pay", args=[order_id]))
+
+        if action == "pay_mp":
+            order.payment_method = "mp"
+            order.save(update_fields=["payment_method"])
+            _, init_point = create_mp_preference_for_store_order(order, discount_ars=order.discount_ars)
+            if init_point:
+                return redirect(init_point)
+            messages.error(request, "No se pudo generar el link de pago. Intentá de nuevo.")
+            return redirect(reverse("lms:store_order_pay", args=[order_id]))
+
+        if action == "upload_receipt":
+            receipt = request.FILES.get("receipt")
+            if not receipt:
+                messages.error(request, "Tenés que adjuntar el comprobante de pago.")
+                return redirect(reverse("lms:store_order_pay", args=[order_id]))
+            ext = receipt.name.rsplit(".", 1)[-1].lower()
+            if ext not in ("pdf", "jpg", "jpeg", "png"):
+                messages.error(request, "Solo se aceptan archivos PDF, JPG o PNG.")
+                return redirect(reverse("lms:store_order_pay", args=[order_id]))
+            filename = f"store_receipts/order_{order.id}_{int(time.time())}.{ext}"
+            saved = default_storage.save(filename, receipt)
+            order.transfer_receipt = saved
+            order.payment_method = "transfer"
+            order.save(update_fields=["transfer_receipt", "payment_method"])
+            messages.success(request, "Comprobante recibido. Vamos a verificar tu pago y te avisaremos.")
+            return redirect(reverse("lms:store_my_orders"))
+
+    return render(request, "lms/store/order_pay.html", {"order": order})
 
 
 # ─── ADMIN TIENDA ─────────────────────────────────────────────────────────────

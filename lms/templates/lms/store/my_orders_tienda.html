@@ -27,12 +27,10 @@
             <span style="background:#ffeff1; color:#b30b2a; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">✗ Cancelado</span>
           {% else %}
             <span style="background:#fff8e1; color:#795548; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px">⏳ Pendiente</span>
-            {% if order.payment_method == 'mp' %}
-              <a href="{% url 'lms:store_order_pay' order.id %}"
-                 style="background:#009ee3; color:#fff; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px; text-decoration:none">
-                💳 Pagar ahora
-              </a>
-            {% endif %}
+            <a href="{% url 'lms:store_order_pay' order.id %}"
+               style="background:#009ee3; color:#fff; border-radius:999px; padding:4px 14px; font-weight:700; font-size:13px; text-decoration:none">
+              💳 Pagar ahora
+            </a>
           {% endif %}
           <span style="font-weight:800; color:var(--color-principal)">$ {{ order.total_ars }}</span>
         </div>

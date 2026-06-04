@@ -432,7 +432,7 @@
               {% elif o.status == 'cancelled' %}
               <span style="display:inline-block;margin-left:6px;padding:3px 8px;border-radius:999px;font-size:11px;background:#fde8e8;color:#7a1818;font-weight:700">Cancelado</span>
               {% endif %}
-              {% if o.status == 'pending' and o.payment_method == 'mp' %}
+              {% if o.status == 'pending' %}
               <a href="{% url 'lms:store_order_pay' o.id %}"
                  style="display:inline-block;margin-left:6px;padding:3px 10px;border-radius:999px;font-size:11px;background:#009ee3;color:#fff;font-weight:700;text-decoration:none">
                 💳 Pagar ahora

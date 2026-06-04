@@ -1,0 +1,153 @@
+{% extends 'lms/base.html' %}
+{% block title %}Pagar pedido #{{ order.id }}{% endblock %}
+{% block content %}
+
+<div style="max-width:560px; margin:0 auto">
+
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px">
+    <a href="{% url 'lms:store_my_orders' %}" style="color:#888; text-decoration:none; font-size:22px">←</a>
+    <h1 style="margin:0; font-size:1.4rem">Completar pago — Pedido #{{ order.id }}</h1>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div style="padding:12px 16px; border-radius:10px; margin-bottom:16px;
+                  background:{% if msg.tags == 'error' %}#fde8e8{% else %}#e7f9ed{% endif %};
+                  color:{% if msg.tags == 'error' %}#7a1818{% else %}#187a3d{% endif %}; font-size:14px">
+        {{ msg }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# Resumen del pedido #}
+  <div class="card" style="margin-bottom:16px">
+    <h2 style="margin:0 0 14px; font-size:1rem">Resumen</h2>
+    <ul style="margin:0 0 12px 18px; padding:0">
+      {% for item in order.items.all %}
+        <li style="font-size:14px; margin-bottom:4px">
+          {{ item.qty }}x {{ item.product.name }} — ${{ item.unit_price|floatformat:0 }} c/u
+        </li>
+      {% endfor %}
+    </ul>
+    <div style="font-size:13px; color:#666; border-top:1px solid #eee; padding-top:10px">
+      <div>Subtotal: ${{ order.subtotal_ars|floatformat:0 }}</div>
+      <div>Envío: ${{ order.shipping_ars|floatformat:0 }}</div>
+      {% if order.discount_ars %}
+        <div style="color:#187a3d; font-weight:700">Descuento: −${{ order.discount_ars|floatformat:0 }}</div>
+      {% endif %}
+    </div>
+    <div style="font-size:1.2rem; font-weight:800; color:var(--color-principal); margin-top:8px">
+      Total: ${{ order.total_ars|floatformat:0 }}
+    </div>
+
+    {% if not order.discount_ars %}
+    <form method="post" style="margin-top:14px; display:flex; gap:8px">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="apply_discount">
+      <input type="text" name="discount_code" placeholder="Código de descuento"
+             style="flex:1; padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:13px">
+      <button type="submit"
+              style="padding:8px 16px; border-radius:8px; border:none;
+                     background:#555; color:#fff; font-size:13px; cursor:pointer">
+        Aplicar
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# Opciones de pago #}
+  <div class="card" style="margin-bottom:16px">
+    <h2 style="margin:0 0 16px; font-size:1rem">Elegí cómo pagar</h2>
+
+    <div style="display:flex; flex-direction:column; gap:12px">
+
+      {# Mercado Pago #}
+      <button onclick="showMethod('mp')" id="btn-mp"
+              style="display:flex; align-items:center; gap:14px; padding:16px; border-radius:12px;
+                     border:2px solid #e9e9e9; background:#fff; cursor:pointer; text-align:left;
+                     transition:.2s; width:100%">
+        <span style="font-size:28px">💳</span>
+        <div>
+          <div style="font-weight:700; font-size:15px">Mercado Pago</div>
+          <div style="font-size:13px; color:#888">Tarjeta de crédito/débito, dinero en cuenta</div>
+        </div>
+      </button>
+
+      {# Transferencia #}
+      <button onclick="showMethod('transfer')" id="btn-transfer"
+              style="display:flex; align-items:center; gap:14px; padding:16px; border-radius:12px;
+                     border:2px solid #e9e9e9; background:#fff; cursor:pointer; text-align:left;
+                     transition:.2s; width:100%">
+        <span style="font-size:28px">🏦</span>
+        <div>
+          <div style="font-weight:700; font-size:15px">Transferencia bancaria</div>
+          <div style="font-size:13px; color:#888">CBU/CVU — subí el comprobante</div>
+        </div>
+      </button>
+
+    </div>
+  </div>
+
+  {# Panel MP #}
+  <div id="panel-mp" style="display:none">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pay_mp">
+      <button type="submit"
+              style="width:100%; padding:16px; border-radius:12px; border:none;
+                     background:#009ee3; color:#fff; font-size:1rem; font-weight:700; cursor:pointer">
+        Ir a Mercado Pago →
+      </button>
+    </form>
+  </div>
+
+  {# Panel transferencia #}
+  <div id="panel-transfer" style="display:none">
+    <div class="card">
+      <div style="padding:16px; background:#fff8e1; border:1px solid #ffe082; border-radius:10px; margin-bottom:16px">
+        <p style="margin:0 0 8px; font-weight:700; font-size:14px; color:#795548">Datos para la transferencia</p>
+        <div style="font-size:14px; line-height:2.2; color:#333">
+          <div><strong>Alias:</strong> INFINITO111</div>
+          <div><strong>CUIT:</strong> 27-17429724-5</div>
+        </div>
+      </div>
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="upload_receipt">
+        <div style="margin-bottom:16px">
+          <label style="font-size:13px; font-weight:700; color:#555; display:block; margin-bottom:6px">
+            Adjuntar comprobante de pago (PDF, JPG o PNG)
+          </label>
+          <input type="file" name="receipt" accept=".pdf,.jpg,.jpeg,.png"
+                 style="font-size:13px; width:100%">
+          <p style="font-size:12px; color:#888; margin:6px 0 0">
+            Una vez que lo recibamos verificamos el pago y te avisamos.
+          </p>
+        </div>
+        <button type="submit"
+                style="width:100%; padding:14px; border-radius:12px; border:none;
+                       background:var(--color-principal); color:#fff; font-size:1rem; font-weight:700; cursor:pointer">
+          Enviar comprobante
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showMethod(method) {
+  document.getElementById('panel-mp').style.display       = method === 'mp'       ? 'block' : 'none';
+  document.getElementById('panel-transfer').style.display = method === 'transfer' ? 'block' : 'none';
+
+  const btnMp       = document.getElementById('btn-mp');
+  const btnTransfer = document.getElementById('btn-transfer');
+  btnMp.style.borderColor       = method === 'mp'       ? 'var(--color-principal)' : '#e9e9e9';
+  btnTransfer.style.borderColor = method === 'transfer' ? 'var(--color-principal)' : '#e9e9e9';
+  btnMp.style.background        = method === 'mp'       ? '#f0f8ff' : '#fff';
+  btnTransfer.style.background  = method === 'transfer' ? '#f0f8ff' : '#fff';
+}
+</script>
+
+{% endblock %}
