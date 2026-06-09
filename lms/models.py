@@ -102,8 +102,14 @@ class Stage(TimeStamped):
     slug = models.SlugField()
     order = models.PositiveIntegerField(default=1)
     price_ars = models.DecimalField(max_digits=12, decimal_places=2)
-    # PDF general (opcional): usar Drive /preview o link directo
     pdf_url = models.URLField(blank=True)
+    pdf_file = models.FileField(upload_to="stage_pdfs/", null=True, blank=True)
+
+    @property
+    def pdf_src(self):
+        if self.pdf_file:
+            return self.pdf_file.url
+        return self.pdf_url
 
     class Meta:
         unique_together = ('course', 'slug')
@@ -117,9 +123,15 @@ class Lesson(TimeStamped):
     stage = models.ForeignKey(Stage, related_name='lessons', on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     youtube_url = models.URLField(blank=True)
-    # PDF por clase (opcional)
     pdf_url = models.URLField(blank=True)
+    pdf_file = models.FileField(upload_to="lesson_pdfs/", null=True, blank=True)
     order = models.PositiveIntegerField(default=1)
+
+    @property
+    def pdf_src(self):
+        if self.pdf_file:
+            return self.pdf_file.url
+        return self.pdf_url
 
     class Meta:
         ordering = ['order']
@@ -162,6 +174,7 @@ class Enrollment(TimeStamped):
     user = models.ForeignKey(User, related_name='enrollments', on_delete=models.CASCADE)
     course = models.ForeignKey(Course, related_name='enrollments', on_delete=models.CASCADE)
     started_at = models.DateTimeField(default=timezone.now)
+    certificate_issued_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'course')

@@ -168,10 +168,15 @@
                            min="0" step="1" required placeholder="Ej: 1500">
                   </div>
                 </div>
-                <div class="field-row single">
+                <div class="field-row">
                   <div class="field">
                     <label>URL PDF general de la etapa (opcional)</label>
                     <input type="url" name="stage_{{ forloop.counter0 }}_pdf" value="{{ stage.pdf_url }}" placeholder="https://drive.google.com/...">
+                  </div>
+                  <div class="field">
+                    <label>O subir PDF directamente</label>
+                    <input type="file" name="stage_{{ forloop.counter0 }}_pdf_file" accept=".pdf">
+                    {% if stage.pdf_file %}<small style="color:#666">Actual: {{ stage.pdf_file.name|slice:"11:" }}</small>{% endif %}
                   </div>
                 </div>
 
@@ -203,6 +208,11 @@
                         <div class="field">
                           <label>URL PDF de la clase (opcional)</label>
                           <input type="url" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_pdf" value="{{ lesson.pdf_url }}" placeholder="https://drive.google.com/...">
+                        </div>
+                        <div class="field">
+                          <label>O subir PDF directamente</label>
+                          <input type="file" name="stage_{{ forloop.parentloop.counter0 }}_lesson_{{ forloop.counter0 }}_pdf_file" accept=".pdf">
+                          {% if lesson.pdf_file %}<small style="color:#666">Actual: {{ lesson.pdf_file.name|slice:"12:" }}</small>{% endif %}
                         </div>
                       </div>
                     </div>

@@ -8,11 +8,11 @@
   <p><a class="btn" href="{% url 'lms:course_detail' stage.course.slug %}">Volver</a></p>
 {% else %}
 
-  {% if stage.pdf_url %}
+  {% if stage.pdf_src %}
     <div class="card">
       <h3>Material PDF de la etapa</h3>
-      <iframe src="{{ stage.pdf_url|safe }}" style="width:100%;height:600px;border:none"></iframe>
-      <p><a class="btn secondary" href="{{ stage.pdf_url }}" target="_blank">Descargar PDF</a></p>
+      <iframe src="{{ stage.pdf_src|safe }}" style="width:100%;height:600px;border:none"></iframe>
+      <p><a class="btn secondary" href="{{ stage.pdf_src }}" target="_blank">Descargar PDF</a></p>
     </div>
   {% endif %}
 
@@ -30,10 +30,10 @@
   </div>
 {% endif %}
 
-      {% if les.pdf_url %}
+      {% if les.pdf_src %}
         <div style="margin-top:12px">
-          <iframe src="{{ les.pdf_url|safe }}" style="width:100%;height:480px;border:none"></iframe>
-          <p><a class="btn secondary" href="{{ les.pdf_url }}" target="_blank">Descargar PDF</a></p>
+          <iframe src="{{ les.pdf_src|safe }}" style="width:100%;height:480px;border:none"></iframe>
+          <p><a class="btn secondary" href="{{ les.pdf_src }}" target="_blank">Descargar PDF</a></p>
         </div>
       {% endif %}
     </div>

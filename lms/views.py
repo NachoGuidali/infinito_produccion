@@ -24,6 +24,7 @@ import mercadopago
 
 from .models import (
     Course,
+    Enrollment,
     Stage,
     Lesson,
     Quiz,
@@ -294,18 +295,18 @@ def course_detail(request, slug):
             )
             if not has_access:
                 continue
-            if getattr(st, "pdf_url", ""):
+            if st.pdf_src:
                 pdf_items.append(
                     {
                         "title": f"{st.title} — Material",
-                        "url": st.pdf_url,
+                        "url": st.pdf_src,
                         "source": "stage",
                     }
                 )
             for le in st.lessons.all():
-                if getattr(le, "pdf_url", ""):
+                if le.pdf_src:
                     pdf_items.append(
-                        {"title": le.title, "url": le.pdf_url, "source": "lesson"}
+                        {"title": le.title, "url": le.pdf_src, "source": "lesson"}
                     )
                 if getattr(le, "youtube_url", ""):
                     video_lessons.append(le)
@@ -385,10 +386,15 @@ def course_certificate(request, slug):
     if total_stages == 0 or passed_count != total_stages:
         return HttpResponseForbidden("El curso no está finalizado.")
 
-    # 📅 Fecha real de finalización = última etapa aprobada
-    completion_date = passed_qs.aggregate(
-        completed_at=Max("passed_at")
-    )["completed_at"]
+    enrollment = Enrollment.objects.filter(user=request.user, course=course).first()
+    if not enrollment:
+        return HttpResponseForbidden("No tenés inscripción en este curso.")
+
+    if not enrollment.certificate_issued_at:
+        enrollment.certificate_issued_at = passed_qs.aggregate(
+            completed_at=Max("passed_at")
+        )["completed_at"] or timezone.now()
+        enrollment.save(update_fields=["certificate_issued_at"])
 
     full_name = (request.user.get_full_name() or request.user.username).strip()
 
@@ -398,7 +404,7 @@ def course_certificate(request, slug):
         {
             "course": course,
             "user_fullname": full_name,
-            "completion_date": completion_date,
+            "completion_date": enrollment.certificate_issued_at,
         },
     )
 
@@ -1310,6 +1316,9 @@ def course_wizard_save(request, course_id=None):
         stage.order     = int(POST.get(f"stage_{n}_order") or n + 1)
         stage.price_ars = Decimal(int(POST.get(f"stage_{n}_price") or 0))
         stage.pdf_url   = POST.get(f"stage_{n}_pdf", "").strip()
+        pdf_file = request.FILES.get(f"stage_{n}_pdf_file")
+        if pdf_file:
+            stage.pdf_file = pdf_file
 
         # Generar slug de etapa único dentro del curso
         stage_base_slug = slugify(stage_title)
@@ -1352,6 +1361,9 @@ def course_wizard_save(request, course_id=None):
             lesson.youtube_url = POST.get(f"stage_{n}_lesson_{m}_youtube", "").strip()
             lesson.pdf_url     = POST.get(f"stage_{n}_lesson_{m}_pdf", "").strip()
             lesson.order       = int(POST.get(f"stage_{n}_lesson_{m}_order") or m + 1)
+            pdf_file = request.FILES.get(f"stage_{n}_lesson_{m}_pdf_file")
+            if pdf_file:
+                lesson.pdf_file = pdf_file
             lesson.save()
             submitted_lesson_ids.add(lesson.pk)
 
