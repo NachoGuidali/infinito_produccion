@@ -121,6 +121,11 @@ STATIC_ROOT = '/home/infinito_produccion/staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Permite subir PDFs grandes (material de cursos) sin que Django los rechace.
+# FILE_UPLOAD_MAX_MEMORY_SIZE se deja en su default bajo para que los archivos
+# grandes se escriban a disco temporal en vez de quedar enteros en RAM.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 60 * 1024 * 1024  # 60MB
+
 # -------------------------
 # Auth redirects (login/logout)
 # -------------------------
