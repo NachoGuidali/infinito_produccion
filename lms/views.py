@@ -270,8 +270,13 @@ def course_detail(request, slug):
             ).values_list("stage_id", flat=True)
         )
 
-        # Curso “completado” si aprobó todas las etapas
+        # Curso “completado” si aprobó todas las etapas, o si ya se le emitió el
+        # certificado (agregar etapas nuevas después no lo des-completa).
         if stage_ids and stage_ids.issubset(passed_by_id):
+            course_completed = True
+        elif Enrollment.objects.filter(
+            user=request.user, course=course, certificate_issued_at__isnull=False
+        ).exists():
             course_completed = True
 
     # Bundle(s)
@@ -371,6 +376,10 @@ from django.db.models import Max
 def course_certificate(request, slug):
     course = get_object_or_404(Course, slug=slug)
 
+    enrollment = Enrollment.objects.filter(user=request.user, course=course).first()
+    if not enrollment:
+        return HttpResponseForbidden("No tenés inscripción en este curso.")
+
     total_stages = course.stages.count()
 
     # Etapas aprobadas por el usuario
@@ -382,13 +391,13 @@ def course_certificate(request, slug):
 
     passed_count = passed_qs.count()
 
-    # 🚫 No completó el curso
-    if total_stages == 0 or passed_count != total_stages:
+    # 🚫 No completó el curso.
+    # Si el certificado YA fue emitido no se vuelve a validar: agregar etapas
+    # nuevas al curso después no le puede sacar un certificado que ya tenía.
+    if not enrollment.certificate_issued_at and (
+        total_stages == 0 or passed_count != total_stages
+    ):
         return HttpResponseForbidden("El curso no está finalizado.")
-
-    enrollment = Enrollment.objects.filter(user=request.user, course=course).first()
-    if not enrollment:
-        return HttpResponseForbidden("No tenés inscripción en este curso.")
 
     if not enrollment.certificate_issued_at:
         enrollment.certificate_issued_at = passed_qs.aggregate(
@@ -890,6 +899,13 @@ def profile(request):
     total_finalizados = 0
     failed_quizzes = QuizAttempt.objects.filter(user=user, passed=False).count()
 
+    # Cursos con certificado ya emitido: siguen contando como aprobados aunque
+    # después se hayan agregado etapas nuevas al curso.
+    certified_course_ids = set(
+        Enrollment.objects.filter(user=user, certificate_issued_at__isnull=False)
+        .values_list("course_id", flat=True)
+    )
+
     for course in my_courses:
         total_inscriptos += 1
         stages = list(course.stages.all().order_by("order"))
@@ -905,12 +921,30 @@ def profile(request):
         next_stage_to_study = None   # Etapa siguiente para CONTINUAR (ya comprada)
         next_stage_to_buy = None     # Etapa siguiente para COMPRAR (no tiene entitlement)
 
+        # Etapa anterior real de cada etapa (la de mayor `order` menor al suyo),
+        # con la misma regla que services.access.has_passed_previous. Se resuelve
+        # en memoria para no meter queries dentro del loop.
+        prev_of = {}
+        for i, s in enumerate(stages):
+            prev = None
+            for cand in stages[:i]:
+                if cand.order < s.order and (
+                    prev is None or (cand.order, cand.id) > (prev.order, prev.id)
+                ):
+                    prev = cand
+            prev_of[s.id] = prev
+
         for s in stages:
             entitled = s.id in entitled_stage_ids
             passed = s.id in passed_by_id
+
+            # Solo linkeamos la etapa si el alumno REALMENTE puede abrirla: si no,
+            # el link lo lleva a un cartel de "aprobá la etapa anterior".
+            prev = prev_of[s.id]
+            gate_ok = (prev is None) or (prev.id in passed_by_id)
             url = (
                 reverse("lms:stage_detail", args=[course.slug, s.slug])
-                if entitled
+                if entitled and (passed or gate_ok)
                 else None
             )
 
@@ -937,6 +971,8 @@ def profile(request):
         passed_count = sum(1 for s in stages if s.id in passed_by_id)
 
         if total > 0 and passed_count == total:
+            status = "aprobado"
+        elif course.id in certified_course_ids:
             status = "aprobado"
         elif passed_count > 0:
             status = "en_progreso"

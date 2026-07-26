@@ -124,6 +124,10 @@
     background: #eafaf1
   }
 
+  /* Chips que son link (etapa comprada): que se note que se puede clickear */
+  a.chip { cursor: pointer; transition: border-color .15s, box-shadow .15s }
+  a.chip:hover { border-color: var(--color-principal); box-shadow: 0 1px 6px rgba(0,0,0,.08) }
+
   .muted {
     opacity: .75
   }
@@ -302,9 +306,15 @@
 
               <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
                 {% for s in c.stages_info %}
-                <span class="chip {% if s.passed %}ok{% endif %}">
-                  {% if s.passed %}✔{% else %}•{% endif %} {{ s.title }}
-                </span>
+                  {% if s.url %}
+                  {# Etapa comprada: siempre clickeable, tambien si ya la aprobo (repaso) #}
+                  <a class="chip {% if s.passed %}ok{% endif %}" href="{{ s.url }}"
+                     title="Volver a la etapa {{ s.order }}">
+                    {% if s.passed %}✔{% else %}•{% endif %} {{ s.title }}
+                  </a>
+                  {% else %}
+                  <span class="chip">• {{ s.title }}</span>
+                  {% endif %}
                 {% endfor %}
               </div>
             </div>
@@ -313,6 +323,11 @@
               {% if c.status == 'aprobado' %}
               <a class="btn" href="{% url 'lms:course_certificate' c.course.slug %}">
                 Ver certificado
+              </a>
+              {# Curso terminado: dejarle igual una via de vuelta al contenido #}
+              <a class="btn secondary" style="margin-top:6px"
+                 href="{% url 'lms:course_detail' c.course.slug %}#contenido">
+                Ver contenido
               </a>
 
               {% elif c.next_stage_url %}
