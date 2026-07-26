@@ -168,6 +168,18 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 # EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'False'
 
 # -------------------------
+# Caché
+# -------------------------
+# Basada en archivos (no en memoria) para que el límite de registros por IP
+# se comparta entre los procesos/workers del servidor. No requiere migración.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': BASE_DIR / '.cache',
+    }
+}
+
+# -------------------------
 # Default PK
 # -------------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

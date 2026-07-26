@@ -104,6 +104,15 @@
       </div>
     </div>
 
+    {# Antibot: trampa invisible + sello de tiempo. No tocar ni quitar. #}
+    <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;overflow:hidden;height:0">
+      <label for="{{ form.sitio_web.id_for_label }}">No completar</label>
+      {{ form.sitio_web }}
+    </div>
+    {{ form.ts }}
+    {% if form.sitio_web.errors %}<div class="err">{{ form.sitio_web.errors }}</div>{% endif %}
+    {% if form.ts.errors %}<div class="err">{{ form.ts.errors }}</div>{% endif %}
+
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
       <a class="btn btn-outline" href="{% url 'login' %}">Ya tengo cuenta</a>
       <button type="submit" class="btn">Crear cuenta</button>

@@ -13,6 +13,7 @@ from django.core.files.storage import default_storage
 from django.utils.text import slugify
 from django.core.mail import send_mail
 from django.core import signing
+from django.core.cache import cache
 from django.conf import settings
 
 import time
@@ -148,16 +149,42 @@ def home(request):
 # =======================
 # SIGNUP (registro + confirmación)
 # =======================
+def _client_ip(request):
+    """IP real del visitante. El sitio corre detrás de proxy, así que primero XFF."""
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "") or "desconocida"
+
+
+# Tope de cuentas creadas por IP. Cada registro dispara un mail de activación,
+# así que esto es lo que evita que el sitio se use como relay de spam.
+_SIGNUP_MAX_POR_IP = 5
+_SIGNUP_VENTANA_SEG = 60 * 60
+
+
 def signup(request):
     if request.user.is_authenticated:
         return redirect("lms:home")
 
+    cache_key = "signup:ip:" + hashlib.md5(_client_ip(request).encode()).hexdigest()
+
     if request.method == "POST":
+        creadas = cache.get(cache_key, 0)
+        if creadas >= _SIGNUP_MAX_POR_IP:
+            messages.error(
+                request,
+                "Se registraron demasiadas cuentas desde esta conexión. "
+                "Probá de nuevo en una hora, o escribinos por WhatsApp.",
+            )
+            return render(request, "lms/signup.html", {"form": SignupForm()})
+
         form = SignupForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(
                 request=request, create_inactive=True
             )  # crea user inactivo + Profile
+            cache.set(cache_key, creadas + 1, _SIGNUP_VENTANA_SEG)
             _send_activation_email(request, user)
             return redirect("lms:signup_done")
     else:

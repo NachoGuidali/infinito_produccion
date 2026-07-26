@@ -19,6 +19,9 @@ db.sqlite3
 # static collect (si usás collectstatic en prod)
 staticfiles/
 
+# caché en archivos (límite de registros por IP)
+.cache/
+
 # --- IDE ---
 .vscode/
 .idea/

@@ -1,6 +1,10 @@
 # lms/forms.py
+import re
+import time
+
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from datetime import date
@@ -9,6 +13,14 @@ from django.contrib.auth.forms import AuthenticationForm
 from .models import Profile  # <— antes decía UserProfile
 
 User = get_user_model()
+
+# Antibot del registro. Entre ene y may 2026 entraron ~1450 cuentas automaticas
+# que rellenaban TODOS los campos con 10 letras al azar (dni='rshjmrrqdt'),
+# telefono '+1-...' y fecha de nacimiento en el futuro. Cada una disparaba un
+# mail de activacion a una direccion real ajena, usando el sitio como relay.
+_HONEYPOT_SALT = "lms.signup.hp"
+_MIN_SEGUNDOS_FORMULARIO = 3   # un humano no completa 10 campos en menos
+_EDAD_MINIMA = 14              # el alumno real mas joven tiene 15 (nacido 2010)
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(label="Email o usuario")
@@ -50,6 +62,53 @@ class SignupForm(forms.Form):
                                        widget=forms.TextInput(attrs={"inputmode": "numeric"}))
     avatar           = forms.ImageField(label="Foto de perfil", required=False)
 
+    # ── Antibot ──
+    # Campo trampa: invisible para el usuario, los bots que rellenan todo lo llenan.
+    sitio_web = forms.CharField(
+        required=False, label="",
+        widget=forms.TextInput(attrs={
+            "tabindex": "-1", "autocomplete": "off", "aria-hidden": "true",
+            "style": "position:absolute;left:-9999px;width:1px;height:1px;opacity:0",
+        }),
+    )
+    # Marca de tiempo firmada: mide cuánto tardó en completar el formulario.
+    ts = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Al mostrar el formulario vacío, sellamos el momento de apertura.
+        if not self.is_bound:
+            self.fields["ts"].initial = signing.dumps(time.time(), salt=_HONEYPOT_SALT)
+
+    def clean_sitio_web(self):
+        if (self.cleaned_data.get("sitio_web") or "").strip():
+            raise ValidationError("No pudimos validar el formulario. Recargá la página.")
+        return ""
+
+    def clean_ts(self):
+        raw = self.cleaned_data.get("ts") or ""
+        if not raw:
+            raise ValidationError("Recargá la página y completá el formulario de nuevo.")
+        try:
+            abierto = signing.loads(raw, salt=_HONEYPOT_SALT, max_age=60 * 60 * 6)
+        except signing.SignatureExpired:
+            raise ValidationError("El formulario expiró. Recargá la página.")
+        except signing.BadSignature:
+            raise ValidationError("No pudimos validar el formulario. Recargá la página.")
+        if time.time() - float(abierto) < _MIN_SEGUNDOS_FORMULARIO:
+            raise ValidationError("Enviaste el formulario demasiado rápido. Intentá de nuevo.")
+        return raw
+
+    def clean_dni(self):
+        # Los 149 DNI reales son 8 dígitos; los bots ponían 10 letras.
+        dni = (self.cleaned_data.get("dni") or "").strip()
+        limpio = re.sub(r"[.\s-]", "", dni)
+        if not limpio.isdigit():
+            raise ValidationError("El DNI debe tener solo números.")
+        if not (7 <= len(limpio) <= 9):
+            raise ValidationError("El DNI debe tener entre 7 y 9 dígitos.")
+        return limpio
+
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email=email).exists():
@@ -67,8 +126,15 @@ class SignupForm(forms.Form):
 
     def clean_fecha_nacimiento(self):
         fn = self.cleaned_data["fecha_nacimiento"]
-        if fn >= date.today():
+        hoy = date.today()
+        if fn >= hoy:
             raise ValidationError("La fecha de nacimiento no puede ser en el futuro.")
+        # Los bots nacían entre 2023 y 2026. El alumno real más joven nació en 2010.
+        edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+        if edad < _EDAD_MINIMA:
+            raise ValidationError("Revisá la fecha de nacimiento.")
+        if edad > 110:
+            raise ValidationError("Revisá la fecha de nacimiento.")
         return fn
 
     def save(self, request=None, *, create_inactive: bool = True):
