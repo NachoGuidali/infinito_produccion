@@ -192,7 +192,7 @@
           <span>Envío a acordar con el vendedor</span>
         </div>
         <div id="discount-row" style="display:none; justify-content:space-between; font-size:14px; color:#22a06b; font-weight:700">
-          <span>🏷️ Descuento profesional (20%)</span>
+          <span>🏷️ Descuento</span>
           <span>− $ <span id="discount-val">0</span></span>
         </div>
         <div style="border-top:2px solid #f0f0f0; padding-top:12px; display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800">
@@ -234,7 +234,7 @@
       document.getElementById('discount-row').style.display = 'flex';
 
       msg.style.color = '#22a06b';
-      msg.textContent = '✓ Código aplicado — 20% de descuento';
+      msg.textContent = '✓ Código aplicado';
     } else {
       appliedDiscount = 0;
       document.getElementById('discount-row').style.display = 'none';
