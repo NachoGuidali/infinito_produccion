@@ -259,7 +259,7 @@ def store_checkout(request):
             # Armar nota con descuento si aplica
             notes = data["notes"]
             if discount_ars > 0:
-                notes = f"[DESCUENTO PROFESIONAL 20% — ${discount_ars}]" + (f" {notes}" if notes else "")
+                notes = f"[DESCUENTO — ${discount_ars}]" + (f" {notes}" if notes else "")
 
             with transaction.atomic():
                 order = StoreOrder.objects.create(
