@@ -376,6 +376,7 @@ def store_my_orders(request):
 
 DISCOUNT_CODES = {
     "descuentoprofesionales20": Decimal("0.20"),
+    "agosto30": Decimal("0.30"),
 }
 
 @login_required
