@@ -6,7 +6,7 @@ Se mantiene separado de views.py para no tocarlo.
 import io
 import time
 from datetime import datetime, timezone as dt_timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import openpyxl
 from django.contrib import messages
@@ -256,10 +256,12 @@ def store_checkout(request):
             discount_ars  = (subtotal * discount_rate).quantize(Decimal("0.01"))
             total_final   = total - discount_ars
 
-            # Armar nota con descuento si aplica
+            # Armar nota con descuento si aplica, dejando registrado QUE codigo
+            # se uso y a que tasa (es lo que se ve despues en el panel admin).
             notes = data["notes"]
             if discount_ars > 0:
-                notes = f"[DESCUENTO — ${discount_ars}]" + (f" {notes}" if notes else "")
+                pct = (discount_rate * 100).quantize(Decimal("1"))
+                notes = f"[DESCUENTO {discount_code} {pct}% — ${discount_ars}]" + (f" {notes}" if notes else "")
 
             with transaction.atomic():
                 order = StoreOrder.objects.create(
@@ -401,7 +403,10 @@ def store_order_pay(request, order_id):
                 discount = (order.subtotal_ars * rate).quantize(Decimal("0.01"))
                 order.discount_ars = discount
                 order.total_ars    = order.subtotal_ars + order.shipping_ars - discount
-                order.notes        = f"[DESCUENTO PROFESIONAL 20% — ${discount}]" + (f" {order.notes}" if order.notes else "")
+                # La etiqueta se arma con el codigo y la tasa REALES: si esta
+                # hardcodeada, al agregar un codigo nuevo la nota miente.
+                pct = (rate * 100).quantize(Decimal("1"))
+                order.notes        = f"[DESCUENTO {code} {pct}% — ${discount}]" + (f" {order.notes}" if order.notes else "")
                 order.save(update_fields=["discount_ars", "total_ars", "notes"])
                 messages.success(request, f"Descuento de ${discount} aplicado.")
             return redirect(reverse("lms:store_order_pay", args=[order_id]))
@@ -508,15 +513,30 @@ def store_admin_product_edit(request, product_id):
     if request.method == "POST":
         d   = request.POST
         img = request.FILES.get("image")
+
+        def _dec(campo, actual):
+            """
+            Al EDITAR, un campo numérico vacío significa "no lo toques", nunca
+            "ponelo en 0": si el navegador manda el precio vacío, pisarlo con 0
+            deja el producto a $0 y se vende regalado.
+            """
+            raw = (d.get(campo) or "").strip().replace(",", ".")
+            if raw == "":
+                return actual
+            try:
+                return Decimal(raw)
+            except InvalidOperation:
+                return actual
+
         product.name        = d.get("name", "").strip()
         product.description = d.get("description", "").strip()
-        product.price_ars   = Decimal(d.get("price_ars") or "0")
+        product.price_ars   = _dec("price_ars", product.price_ars)
         product.stock       = int(d.get("stock") or 0)
         product.image_url   = d.get("image_url", "").strip()
-        product.weight_kg   = Decimal(d.get("weight_kg") or "0")
-        product.width_cm    = Decimal(d.get("width_cm") or "0")
-        product.height_cm   = Decimal(d.get("height_cm") or "0")
-        product.depth_cm    = Decimal(d.get("depth_cm") or "0")
+        product.weight_kg   = _dec("weight_kg", product.weight_kg)
+        product.width_cm    = _dec("width_cm", product.width_cm)
+        product.height_cm   = _dec("height_cm", product.height_cm)
+        product.depth_cm    = _dec("depth_cm", product.depth_cm)
         product.is_active   = d.get("is_active") == "true"
         cat_id = d.get("category")
         product.category_id = int(cat_id) if cat_id else None
