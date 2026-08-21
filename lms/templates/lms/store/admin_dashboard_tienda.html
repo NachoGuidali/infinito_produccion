@@ -2,11 +2,11 @@
 {% load l10n %}
 {% block title %}Admin Tienda — Infinito{% endblock %}
 {% block content %}
-
-{# Los <input type="number"> llevan |unlocalize: con es-ar Django escribe los
-   decimales con coma ("1,00") y el navegador rechaza ese value, dejando el
-   campo vacio. #}
-
+{% comment %}
+Los <input type="number"> llevan |unlocalize: con es-ar Django escribe los
+decimales con coma ("1,00") y el navegador rechaza ese value, dejando el
+campo vacio.
+{% endcomment %}
 <style>
   /* Notificaciones */
   #notif-toast{display:none;position:fixed;bottom:24px;right:24px;z-index:9999;

@@ -2,11 +2,11 @@
 {% load l10n %}
 {% block title %}{% if product %}Editar{% else %}Nuevo{% endif %} Producto — Admin{% endblock %}
 {% block content %}
-
-{# Los valores de los <input type="number"> van con |unlocalize: con es-ar Django
-   los escribe con coma ("15500,00") y el navegador rechaza ese value y deja el
-   campo VACIO, asi que al guardar se perdia el precio. #}
-
+{% comment %}
+Los valores de los <input type="number"> van con |unlocalize: con es-ar Django
+los escribe con coma ("15500,00") y el navegador rechaza ese value y deja el
+campo VACIO, asi que al guardar se perdia el precio.
+{% endcomment %}
 <div style="margin-bottom:16px">
   <a href="{% url 'lms:store_admin' %}?tab=products" style="color:var(--color-principal); font-weight:600">
     ← Volver a productos
