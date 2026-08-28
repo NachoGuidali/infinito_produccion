@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from decimal import Decimal
 import hashlib
 
 User = settings.AUTH_USER_MODEL
@@ -469,3 +470,56 @@ class StoreOrderItem(TimeStamped):
     @property
     def subtotal(self):
         return self.unit_price * self.qty
+
+
+class DiscountCode(TimeStamped):
+    """
+    Códigos de descuento administrables desde el panel (antes estaban
+    hardcodeados en views_store.py).
+    """
+    code       = models.CharField("Código", max_length=50, unique=True)
+    percent    = models.PositiveIntegerField("Descuento (%)", default=10)
+    is_active  = models.BooleanField("Activo", default=True)
+    valid_until = models.DateField(
+        "Válido hasta", null=True, blank=True,
+        help_text="Dejar vacío para que no venza nunca."
+    )
+
+    class Meta:
+        verbose_name = "Código de descuento"
+        verbose_name_plural = "Códigos de descuento"
+        ordering = ["code"]
+
+    def __str__(self):
+        return f"{self.code} ({self.percent}%)"
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or "").strip().lower()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_expired(self):
+        return bool(self.valid_until and self.valid_until < timezone.localdate())
+
+    @property
+    def is_usable(self):
+        return self.is_active and not self.is_expired
+
+    @property
+    def rate(self):
+        """Tasa como Decimal: 20% → Decimal('0.20')."""
+        return Decimal(self.percent) / Decimal("100")
+
+    @classmethod
+    def get_rate(cls, code):
+        """
+        Devuelve la tasa (Decimal) del código si es válido y está vigente,
+        o None si no existe / está desactivado / venció.
+        """
+        code = (code or "").strip().lower()
+        if not code:
+            return None
+        obj = cls.objects.filter(code=code).first()
+        if obj is None or not obj.is_usable:
+            return None
+        return obj.rate

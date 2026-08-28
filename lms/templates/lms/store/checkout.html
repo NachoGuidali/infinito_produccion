@@ -217,33 +217,44 @@
 
 <script>
   const subtotalVal = {{ subtotal|stringformat:"f" }};
-  const VALID_CODES = { "descuentoprofesionales20": 0.20, "agosto30": 0.30 };
+  const DISCOUNT_URL = "{% url 'lms:store_discount_check' %}";
   let appliedDiscount = 0;
 
+  // Los códigos válidos viven en la base (panel admin → Descuentos), así que
+  // se consultan al servidor en vez de tenerlos escritos acá.
   function applyDiscount() {
     const code = document.getElementById('discount-input').value.trim().toLowerCase();
     const msg  = document.getElementById('discount-msg');
-    const rate = VALID_CODES[code];
 
-    if (rate) {
-      appliedDiscount = Math.round(subtotalVal * rate * 100) / 100;
-      const newTotal  = Math.round((subtotalVal - appliedDiscount) * 100) / 100;
-
-      document.getElementById('discount-val').textContent = appliedDiscount.toLocaleString('es-AR');
-      document.getElementById('total-val').textContent    = newTotal.toLocaleString('es-AR');
-      document.getElementById('discount-row').style.display = 'flex';
-
-      msg.style.color = '#22a06b';
-      msg.textContent = '✓ Código aplicado';
-    } else {
-      appliedDiscount = 0;
-      document.getElementById('discount-row').style.display = 'none';
-      document.getElementById('total-val').textContent = subtotalVal.toLocaleString('es-AR');
-
-      msg.style.color = '#e53935';
-      msg.textContent = 'Código inválido.';
-    }
     msg.style.display = 'block';
+    msg.style.color   = '#888';
+    msg.textContent   = 'Verificando…';
+
+    fetch(DISCOUNT_URL + '?code=' + encodeURIComponent(code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid) {
+          appliedDiscount = data.discount;
+
+          document.getElementById('discount-val').textContent = appliedDiscount.toLocaleString('es-AR');
+          document.getElementById('total-val').textContent    = data.total.toLocaleString('es-AR');
+          document.getElementById('discount-row').style.display = 'flex';
+
+          msg.style.color = '#22a06b';
+          msg.textContent = '✓ Código aplicado (' + data.percent + '%)';
+        } else {
+          appliedDiscount = 0;
+          document.getElementById('discount-row').style.display = 'none';
+          document.getElementById('total-val').textContent = subtotalVal.toLocaleString('es-AR');
+
+          msg.style.color = '#e53935';
+          msg.textContent = 'Código inválido o vencido.';
+        }
+      })
+      .catch(() => {
+        msg.style.color = '#e53935';
+        msg.textContent = 'No se pudo verificar el código. Probá de nuevo.';
+      });
   }
 
   // Aplicar también al presionar Enter en el campo

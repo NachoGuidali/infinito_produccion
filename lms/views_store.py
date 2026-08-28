@@ -21,6 +21,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_POST, require_GET
 
 from .models import (
+    DiscountCode,
     Product,
     ProductCategory,
     ShippingConfig,
@@ -34,6 +35,7 @@ TAB_ITEMS = [
     ("products",   "📦 Productos"),
     ("categories", "🏷️ Categorías"),
     ("orders",     "🚚 Pedidos"),
+    ("discounts",  "💸 Descuentos"),
     ("shipping",   "✉️ Envíos"),
 ]
 
@@ -224,6 +226,27 @@ def store_shipping_calc(request):
     })
 
 
+@require_GET
+def store_discount_check(request):
+    """
+    Valida un código contra la base y devuelve el descuento calculado sobre
+    el carrito de la sesión. Lo usa el checkout para mostrar el total.
+    """
+    code = request.GET.get("code", "").strip().lower()
+    rate = DiscountCode.get_rate(code)
+    if rate is None:
+        return JsonResponse({"valid": False})
+
+    subtotal = _cart_totals(_store_cart(request.session))
+    discount = (subtotal * rate).quantize(Decimal("0.01"))
+    return JsonResponse({
+        "valid":    True,
+        "percent":  int(rate * 100),
+        "discount": float(discount),
+        "total":    float(subtotal - discount),
+    })
+
+
 # ─── CHECKOUT ────────────────────────────────────────────────────────────────
 
 @login_required
@@ -252,7 +275,7 @@ def store_checkout(request):
 
             # Validar código de descuento
             discount_code = request.POST.get("discount_code", "").strip().lower()
-            discount_rate = DISCOUNT_CODES.get(discount_code, Decimal("0"))
+            discount_rate = DiscountCode.get_rate(discount_code) or Decimal("0")
             discount_ars  = (subtotal * discount_rate).quantize(Decimal("0.01"))
             total_final   = total - discount_ars
 
@@ -376,11 +399,6 @@ def store_my_orders(request):
     return render(request, "lms/store/my_orders_tienda.html", {"orders": orders})
 
 
-DISCOUNT_CODES = {
-    "descuentoprofesionales20": Decimal("0.20"),
-    "agosto30": Decimal("0.30"),
-}
-
 @login_required
 def store_order_pay(request, order_id):
     order = get_object_or_404(StoreOrder, id=order_id, user=request.user)
@@ -394,7 +412,7 @@ def store_order_pay(request, order_id):
 
         if action == "apply_discount":
             code = request.POST.get("discount_code", "").strip().lower()
-            rate = DISCOUNT_CODES.get(code)
+            rate = DiscountCode.get_rate(code)
             if not rate:
                 messages.error(request, "Código de descuento inválido.")
             elif order.discount_ars > 0:
@@ -451,6 +469,7 @@ def store_admin(request):
     categories = ProductCategory.objects.all()
     config     = ShippingConfig.get()
     zones      = ShippingZone.objects.all()
+    discounts  = DiscountCode.objects.all()
 
     orders_qs = StoreOrder.objects.select_related("user").prefetch_related("items__product").order_by("-created_at")
     if status_filter:
@@ -463,6 +482,7 @@ def store_admin(request):
         "orders":         orders,
         "config":         config,
         "zones":          zones,
+        "discounts":      discounts,
         "tab":            tab,
         "tab_items":      TAB_ITEMS,
         "status_filter":  status_filter,
@@ -556,6 +576,19 @@ def store_admin_product_edit(request, product_id):
 def store_admin_product_delete(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     name    = product.name
+
+    # Si el producto ya figura en pedidos, no se puede borrar sin romper el
+    # historial de ventas: se desactiva y sale del catálogo público.
+    if product.order_items.exists():
+        product.is_active = False
+        product.save(update_fields=["is_active"])
+        messages.warning(
+            request,
+            f'"{name}" tiene pedidos asociados y no se puede eliminar. '
+            f"Se desactivó: ya no aparece en la tienda."
+        )
+        return redirect(f"{reverse('lms:store_admin')}?tab=products")
+
     product.delete()
     messages.success(request, f'Producto "{name}" eliminado.')
     return redirect(f"{reverse('lms:store_admin')}?tab=products")
@@ -724,6 +757,78 @@ def store_admin_category_delete(request, cat_id):
     cat.delete()
     messages.success(request, "Categoría eliminada.")
     return redirect(f"{reverse('lms:store_admin')}?tab=categories")
+
+
+# ── CÓDIGOS DE DESCUENTO ──
+
+@user_passes_test(_is_staff)
+@require_POST
+def store_admin_discount_save(request):
+    """Crea o edita un código de descuento desde el panel."""
+    code_id = request.POST.get("code_id")
+    code    = request.POST.get("code", "").strip().lower()
+    tab     = f"{reverse('lms:store_admin')}?tab=discounts"
+
+    if not code:
+        messages.error(request, "El código no puede estar vacío.")
+        return redirect(tab)
+
+    try:
+        percent = int(request.POST.get("percent") or 0)
+    except ValueError:
+        percent = 0
+    if not 1 <= percent <= 100:
+        messages.error(request, "El porcentaje tiene que estar entre 1 y 100.")
+        return redirect(tab)
+
+    valid_until = request.POST.get("valid_until") or None
+    is_active   = request.POST.get("is_active") == "on"
+
+    # El código es único: no dejar que se pise otro existente.
+    duplicado = DiscountCode.objects.filter(code=code)
+    if code_id:
+        duplicado = duplicado.exclude(id=code_id)
+    if duplicado.exists():
+        messages.error(request, f'Ya existe un código "{code}".')
+        return redirect(tab)
+
+    if code_id:
+        obj = get_object_or_404(DiscountCode, id=code_id)
+        obj.code        = code
+        obj.percent     = percent
+        obj.valid_until = valid_until
+        obj.is_active   = is_active
+        obj.save()
+        messages.success(request, f'Código "{code}" actualizado.')
+    else:
+        DiscountCode.objects.create(
+            code=code, percent=percent,
+            valid_until=valid_until, is_active=is_active,
+        )
+        messages.success(request, f'Código "{code}" creado ({percent}%).')
+    return redirect(tab)
+
+
+@user_passes_test(_is_staff)
+@require_POST
+def store_admin_discount_toggle(request, code_id):
+    """Activa o desactiva un código sin borrarlo."""
+    obj = get_object_or_404(DiscountCode, id=code_id)
+    obj.is_active = not obj.is_active
+    obj.save(update_fields=["is_active"])
+    estado = "activado" if obj.is_active else "desactivado"
+    messages.success(request, f'Código "{obj.code}" {estado}.')
+    return redirect(f"{reverse('lms:store_admin')}?tab=discounts")
+
+
+@user_passes_test(_is_staff)
+@require_POST
+def store_admin_discount_delete(request, code_id):
+    obj  = get_object_or_404(DiscountCode, id=code_id)
+    code = obj.code
+    obj.delete()
+    messages.success(request, f'Código "{code}" eliminado.')
+    return redirect(f"{reverse('lms:store_admin')}?tab=discounts")
 
 
 # ── PEDIDOS ──

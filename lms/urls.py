@@ -112,6 +112,7 @@ urlpatterns = [
     path("tienda/carrito/quitar/<str:key>/", views_store.store_cart_remove, name="store_cart_remove"),
     path("tienda/carrito/actualizar/<str:key>/", views_store.store_cart_update, name="store_cart_update"),
     path("tienda/envio/calcular/", views_store.store_shipping_calc, name="store_shipping_calc"),
+    path("tienda/descuento/validar/", views_store.store_discount_check, name="store_discount_check"),
 
     # Checkout tienda
     path("tienda/checkout/", views_store.store_checkout, name="store_checkout"),
@@ -131,6 +132,11 @@ urlpatterns = [
     # Categorías admin
     path("panel-admin/tienda/categoria/guardar/", views_store.store_admin_category_save, name="store_admin_category_save"),
     path("panel-admin/tienda/categoria/<int:cat_id>/eliminar/", views_store.store_admin_category_delete, name="store_admin_category_delete"),
+
+    # Códigos de descuento admin
+    path("panel-admin/tienda/descuento/guardar/", views_store.store_admin_discount_save, name="store_admin_discount_save"),
+    path("panel-admin/tienda/descuento/<int:code_id>/estado/", views_store.store_admin_discount_toggle, name="store_admin_discount_toggle"),
+    path("panel-admin/tienda/descuento/<int:code_id>/eliminar/", views_store.store_admin_discount_delete, name="store_admin_discount_delete"),
 
     # Pedidos admin
     path("panel-admin/tienda/pedido/<int:order_id>/", views_store.store_admin_order_detail, name="store_admin_order_detail"),
