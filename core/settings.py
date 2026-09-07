@@ -126,6 +126,12 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # grandes se escriban a disco temporal en vez de quedar enteros en RAM.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 60 * 1024 * 1024  # 60MB
 
+# El wizard de cursos manda el curso entero en un solo POST (etapas,
+# lecciones y todas las preguntas del quiz con sus opciones). Un curso
+# grande supera los 1000 campos del default de Django y el guardado
+# fallaba con TooManyFieldsSent.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
+
 # -------------------------
 # Auth redirects (login/logout)
 # -------------------------
