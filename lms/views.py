@@ -8,6 +8,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.utils import timezone
 from django.urls import reverse
+from django.db import transaction
 from django.db.models import Q, Count, Max
 from django.core.files.storage import default_storage
 from django.utils.text import slugify
@@ -1299,6 +1300,11 @@ def course_wizard(request, course_id=None):
 
 @user_passes_test(_is_staff)
 @require_POST
+# Guardar un curso grande son cientos de escrituras (etapas, clases,
+# preguntas y opciones). Sin transaccion, cada una tomaba el lock por
+# separado y dejaba la base bloqueada varios segundos para el resto del
+# sitio; ademas un error a mitad de camino dejaba el curso a medio guardar.
+@transaction.atomic
 def course_wizard_save(request, course_id=None):
     """
     Guarda Course + Stages + Lessons desde el wizard en un solo POST.

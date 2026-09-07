@@ -83,6 +83,21 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            # WAL: los lectores dejan de bloquearse mientras alguien
+            # escribe. Sin esto, guardar un curso grande desde el panel
+            # tiraba "database is locked" a quien estuviera navegando.
+            'init_command': (
+                'PRAGMA journal_mode=WAL;'
+                'PRAGMA synchronous=NORMAL;'
+            ),
+            # Si aun asi coinciden dos escrituras, esperar en vez de fallar.
+            'timeout': 20,
+            # Toma el lock de escritura al abrir la transaccion en vez de
+            # escalarlo a la mitad, que es de donde sale la mayoria de los
+            # "database is locked" en Django + SQLite.
+            'transaction_mode': 'IMMEDIATE',
+        },
     }
 }
 
