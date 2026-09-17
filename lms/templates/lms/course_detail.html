@@ -1,6 +1,9 @@
 {% extends 'lms/base.html' %}
 {% block title %}{{ course.title }} — Infinito Capacitaciones{% endblock %}
 {% block content %}
+<style>
+  .cuotas-hint { margin-left:8px; font-size:.85em; font-weight:600; color:#6b7280; white-space:nowrap; }
+</style>
 
 <h1>{{ course.title }}</h1>
 
@@ -32,8 +35,9 @@
         {% if bundles %}
           {% with b=bundles.0 %}
             <span class="card" style="padding:6px 10px; background:#fff; border-color:#eee; font-weight:700">
-              <del style="opacity:.6">$ {{ stages_total_ars }}</del>
-              <span style="color:#15803d; margin-left:8px">$ {{ b.price_ars }}</span>
+              <del style="opacity:.6">$ {{ stages_total_ars|floatformat:"0g" }}</del>
+              <span style="color:#15803d; margin-left:8px">$ {{ b.price_ars|floatformat:"0g" }}</span>
+              {% if installments_count %}<span class="cuotas-hint">o pagalo en {{ installments_count }} cuotas{% if installment_ars %} de $ {{ installment_ars|floatformat:"0g" }}{% endif %}</span>{% endif %}
             </span>
 
             <form method="post" action="{% url 'lms:cart_add' %}" style="display:inline">{% csrf_token %}
@@ -173,12 +177,12 @@
             {% if request.user.is_authenticated %}
               {% if not st.id in stage_entitled_ids %}
                 {% if st.price_ars %}
-                  <span class="muted" style="font-weight:700">$ {{ st.price_ars }}</span>
+                  <span class="muted" style="font-weight:700">$ {{ st.price_ars|floatformat:"0g" }}</span>
                 {% endif %}
               {% endif %}
             {% else %}
               {% if st.price_ars %}
-                <span class="muted" style="font-weight:700">$ {{ st.price_ars }}</span>
+                <span class="muted" style="font-weight:700">$ {{ st.price_ars|floatformat:"0g" }}</span>
               {% endif %}
             {% endif %}
 
@@ -208,8 +212,9 @@
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap">
           <strong>Curso completo</strong> — Incluye {{ course.stages.all|length }} etapas
           <span class="muted" style="font-weight:700">
-            <del style="opacity:.6">$ {{ stages_total_ars }}</del>
-            <span style="color:#15803d; margin-left:6px">$ {{ b.price_ars }}</span>
+            <del style="opacity:.6">$ {{ stages_total_ars|floatformat:"0g" }}</del>
+            <span style="color:#15803d; margin-left:6px">$ {{ b.price_ars|floatformat:"0g" }}</span>
+            {% if installments_count %}<span class="cuotas-hint">o pagalo en {{ installments_count }} cuotas{% if installment_ars %} de $ {{ installment_ars|floatformat:"0g" }}{% endif %}</span>{% endif %}
           </span>
         </div>
         <div>
