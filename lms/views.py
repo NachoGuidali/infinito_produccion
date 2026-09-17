@@ -318,18 +318,6 @@ def course_detail(request, slug):
     except Exception:
         stages_total_ars = Decimal("0")
 
-    # "o pagalo en N cuotas de $Y": cada cuota es comprar una etapa suelta.
-    # Solo tiene sentido con 2+ etapas pagas; si no todas cuestan lo mismo,
-    # se muestra la cantidad sin monto para no inventar un valor de cuota.
-    stage_prices = [Decimal(s.price_ars or 0) for s in stages_qs]
-    stage_prices = [p for p in stage_prices if p > 0]
-    installments_count = len(stage_prices) if len(stage_prices) >= 2 else 0
-    installment_ars = (
-        stage_prices[0]
-        if installments_count and len(set(stage_prices)) == 1
-        else None
-    )
-
     # Capacitación (aplanado)
     training_payload = None
     if getattr(course, "kind", "") == "training":
@@ -385,8 +373,8 @@ def course_detail(request, slug):
             "stages": stages_qs,
             "first_stage": first_stage,
             "stages_total_ars": stages_total_ars,
-            "installments_count": installments_count,
-            "installment_ars": installment_ars,
+            "installments_count": course.installments_count,
+            "installment_ars": course.installment_ars,
             "training_payload": training_payload,
         },
     )

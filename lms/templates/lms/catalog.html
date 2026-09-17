@@ -55,7 +55,14 @@
             Ver detalle
           </a>
           {% if c.price_ars %}
-            <span class="muted" style="font-weight:700">ARS {{ c.price_ars }}</span>
+            <div style="text-align:right; line-height:1.25">
+              <span class="muted" style="font-weight:700">$ {{ c.price_ars|floatformat:"0g" }}</span>
+              {% if c.installments_count %}
+                <div style="font-size:12px; font-weight:600; color:#6b7280">
+                  o pagalo en {{ c.installments_count }} cuotas{% if c.installment_ars %} de $ {{ c.installment_ars|floatformat:"0g" }}{% endif %}
+                </div>
+              {% endif %}
+            </div>
           {% endif %}
         </div>
       </article>

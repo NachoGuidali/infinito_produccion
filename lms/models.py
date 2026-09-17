@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -95,6 +96,28 @@ class Course(models.Model):
 
     def __str__(self):
         return self.title
+
+    @cached_property
+    def _paid_stage_prices(self):
+        # Usa stages.all() para aprovechar el prefetch del catálogo.
+        return [p for p in (Decimal(s.price_ars or 0) for s in self.stages.all()) if p > 0]
+
+    @property
+    def installments_count(self):
+        """
+        "o pagalo en N cuotas": cada cuota es comprar una etapa suelta.
+        Solo cuenta con 2+ etapas pagas; 0 significa no mostrar nada.
+        """
+        n = len(self._paid_stage_prices)
+        return n if n >= 2 else 0
+
+    @property
+    def installment_ars(self):
+        """Monto de cada cuota, o None si las etapas no cuestan lo mismo."""
+        prices = self._paid_stage_prices
+        if self.installments_count and len(set(prices)) == 1:
+            return prices[0]
+        return None
 
 
 class Stage(TimeStamped):
