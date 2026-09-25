@@ -2,6 +2,7 @@ from django.urls import path
 from django.views.generic import RedirectView
 from . import views
 from . import views_store
+from . import views_seo
 
 app_name = "lms"
 
@@ -19,17 +20,10 @@ urlpatterns = [
 
     # Catálogo (general) + atajos
     path("catalogo/", views.catalog, name="catalog"),
-    path(
-        "cursos/",
-        RedirectView.as_view(url="/catalogo/?type=course", permanent=False),
-        name="catalog_courses",
-    )
-    ,
-    path(
-        "capacitaciones/",
-        RedirectView.as_view(url="/catalogo/?type=training", permanent=False),
-        name="catalog_trainings",
-    ),
+    # Paginas propias (antes redirigian a /catalogo/?type=...): tener la
+    # palabra clave en la URL y una pagina indexable propia rinde mas en Google.
+    path("cursos/", views.catalog, {"tipo": "course"}, name="catalog_courses"),
+    path("capacitaciones/", views.catalog, {"tipo": "training"}, name="catalog_trainings"),
 
     # Curso / Etapa / Quiz / Certificado
     path("curso/<slug:slug>/", views.course_detail, name="course_detail"),
@@ -150,6 +144,10 @@ urlpatterns = [
     path("panel-admin/tienda/zona/<int:zone_id>/eliminar/", views_store.store_admin_zone_delete, name="store_admin_zone_delete"),
     path("panel-admin/tienda/zonas/importar/", views_store.store_admin_zone_import, name="store_admin_zone_import"),
     path("panel-admin/tienda/zonas/plantilla/", views_store.store_admin_zone_import_template, name="store_admin_zone_import_template"),
+
+    # SEO
+    path("robots.txt", views_seo.robots_txt, name="robots_txt"),
+    path("sitemap.xml", views_seo.sitemap_xml, name="sitemap_xml"),
 
     # Logout robusto
     path("salir/", views.logout_view, name="logout"),

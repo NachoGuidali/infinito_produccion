@@ -1,5 +1,7 @@
 {% extends 'lms/base.html' %}
-{% block title %}Cursos y capacitaciones — Infinito Capacitaciones{% endblock %}
+{% block title %}{% if current_type == 'course' %}Cursos de estética y cosmetología online{% elif current_type == 'training' %}Capacitaciones de estética online{% else %}Cursos y capacitaciones de estética online{% endif %} — Infinito Capacitaciones{% endblock %}
+{% block meta_description %}{% if current_type == 'training' %}Capacitaciones cortas de estética online: depilación láser, maderoterapia, ventosas y más.{% else %}Todos los cursos de estética, cosmetología, masajes y drenaje linfático 100% online.{% endif %} Precios en pesos, pago en cuotas por etapas y acceso para siempre.{% endblock %}
+{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{% if current_type == 'course' %}{% url 'lms:catalog_courses' %}{% elif current_type == 'training' %}{% url 'lms:catalog_trainings' %}{% else %}{% url 'lms:catalog' %}{% endif %}{% endblock %}
 {% block content %}
 
 {# ---------- Tabs ---------- #}
@@ -20,11 +22,19 @@
 
 {# ---------- Título dinámico ---------- #}
 {% if current_type == 'course' %}
-  <h1>Cursos</h1>
+  <h1>Cursos de estética y cosmetología online</h1>
+  <p class="muted">Formación completa en estética, cosmetología, masajes y drenaje
+  linfático. Cursás 100% online desde cualquier parte de Argentina, sin horarios
+  y con acceso para siempre.</p>
 {% elif current_type == 'training' %}
-  <h1>Capacitaciones</h1>
+  <h1>Capacitaciones de estética online</h1>
+  <p class="muted">Capacitaciones cortas para sumar una técnica puntual a tu
+  trabajo: depilación láser, maderoterapia, ventosas y más. 100% online.</p>
 {% else %}
-  <h1>Cursos y capacitaciones</h1>
+  <h1>Cursos y capacitaciones de estética online</h1>
+  <p class="muted">Elegí entre cursos completos de estética, cosmetología y
+  masajes, o capacitaciones cortas por técnica. Todo 100% online, con clases en
+  video, material descargable y certificado.</p>
 {% endif %}
 
 {% if courses %}

@@ -1,5 +1,41 @@
 {% extends 'lms/base.html' %}
-{% block title %}{{ course.title }} — Infinito Capacitaciones{% endblock %}
+{% load static %}
+{% load seo %}
+{% block title %}{{ course.title }} online — Curso con certificado | Infinito Capacitaciones{% endblock %}
+{% block meta_description %}{% if course.description %}{{ course.description|meta_desc }}{% else %}Curso de {{ course.title }} 100% online, con clases en video, material descargable y certificado.{% endif %}{% endblock %}
+{% block og_title %}{{ course.title }} — Curso online{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_image %}{% if course.image_url %}{{ course.image_url }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'media/portada.jpeg' %}{% endif %}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ course.title|escapejs }}",
+  "description": "{{ course.description|meta_desc:300|escapejs }}",
+  "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
+  {% if course.image_url %}"image": "{{ course.image_url|escapejs }}",{% endif %}
+  "inLanguage": "es-AR",
+  "isAccessibleForFree": false,
+  "provider": {
+    "@type": "EducationalOrganization",
+    "name": "Infinito Capacitaciones",
+    "url": "{{ request.scheme }}://{{ request.get_host }}/"
+  },
+  "hasCourseInstance": {
+    "@type": "CourseInstance",
+    "courseMode": "online"
+  }{% if course.price_ars %},
+  "offers": {
+    "@type": "Offer",
+    "price": "{{ course.price_ars }}",
+    "priceCurrency": "ARS",
+    "availability": "https://schema.org/InStock",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+  }{% endif %}
+}
+</script>
+{% endblock %}
 {% block content %}
 <style>
   .cuotas-hint { margin-left:8px; font-size:.85em; font-weight:600; color:#6b7280; white-space:nowrap; }

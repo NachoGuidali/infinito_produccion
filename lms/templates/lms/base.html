@@ -5,6 +5,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}Infinito Capacitaciones{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Cursos de estética, cosmetología y masajes 100% online en Argentina. Clases en video, material descargable y certificado. Sin horarios y con acceso para siempre.{% endblock %}" />
+  <link rel="canonical" href="{% block canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}" />
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}" />
+  <meta name="theme-color" content="#ff4ec6" />
+
+  {# Redes sociales (WhatsApp, Facebook, Instagram) #}
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+  <meta property="og:site_name" content="Infinito Capacitaciones" />
+  <meta property="og:locale" content="es_AR" />
+  <meta property="og:title" content="{% block og_title %}Cursos de estética y cosmetología online — Infinito Capacitaciones{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Cursos de estética, cosmetología y masajes 100% online en Argentina.{% endblock %}" />
+  <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}" />
+  <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'media/portada.jpeg' %}{% endblock %}" />
+  <meta name="twitter:card" content="summary_large_image" />
    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
     :root {
@@ -299,6 +313,19 @@
     font-size: 18px;
 }
 </style>
+  {% block structured_data %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "Infinito Capacitaciones",
+    "description": "Cursos de estética, cosmetología y masajes 100% online en Argentina.",
+    "url": "{{ request.scheme }}://{{ request.get_host }}/",
+    "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'media/portada.jpeg' %}",
+    "areaServed": { "@type": "Country", "name": "Argentina" }
+  }
+  </script>
+  {% endblock %}
 </head>
 <body>
   <header>

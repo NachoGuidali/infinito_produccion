@@ -1,5 +1,11 @@
 {% extends 'lms/base.html' %}
-{% block title %}{{ product.name }} — Tienda Infinito{% endblock %}
+{% load static %}
+{% load seo %}
+{% block title %}{{ product.name }} — Comprar online | Infinito Capacitaciones{% endblock %}
+{% block meta_description %}{% if product.description %}{{ product.description|meta_desc }}{% else %}Comprá {{ product.name }} online en Infinito Capacitaciones. Envíos a todo el país.{% endif %}{% endblock %}
+{% block og_title %}{{ product.name }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_image %}{% if product.image_display %}{{ product.image_display }}{% else %}{{ request.scheme }}://{{ request.get_host }}{% static 'media/portada.jpeg' %}{% endif %}{% endblock %}
 {% block content %}
 
 <div style="margin-bottom:16px">

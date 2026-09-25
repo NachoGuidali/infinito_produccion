@@ -250,8 +250,9 @@ def signup_confirm(request, token):
 # =======================
 # CATÁLOGO Y CURSO
 # =======================
-def catalog(request):
-    t = request.GET.get("type")
+def catalog(request, tipo=None):
+    # "tipo" llega de /cursos/ y /capacitaciones/; "type" del querystring.
+    t = tipo or request.GET.get("type")
     qs = Course.objects.prefetch_related("stages").all()
     if t in ("course", "training"):
         qs = qs.filter(kind=t)

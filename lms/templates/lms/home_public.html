@@ -1,7 +1,8 @@
 {% extends "lms/base.html" %}
 {% load static %}
 
-{% block title %}Inicio — Infinito Capacitaciones{% endblock %}
+{% block title %}Cursos de estética y cosmetología online en Argentina — Infinito Capacitaciones{% endblock %}
+{% block meta_description %}Estudiá estética, cosmetología, masajes y drenaje linfático 100% online en toda Argentina. Clases en video, certificado y acceso para siempre.{% endblock %}
 
 {# 👉 si ya usás body_class en base.html, dejame identificar esta página como "guest" #}
 {% block body_class %}page-home page-home--guest{% endblock %}
@@ -10,10 +11,12 @@
 <section class="card hero hero--guest" style="background:#ffffffcc; backdrop-filter:saturate(1.1) blur(2px)">
   <div class="hero-wrap">
     <div>
-      <h1>Formate con <span class="hero-accent">Infinito</span></h1>
+      <h1>Cursos de estética y cosmetología <span class="hero-accent">online</span></h1>
 
       <p class="lead">
-        Cursos intensivos 100% online. Sin horarios. Acceso para siempre.
+        Formate con Infinito. Cursos intensivos 100% online en toda Argentina:
+        estética, cosmetología, masajes y drenaje linfático.
+        Sin horarios. Acceso para siempre.
       </p>
 
       <ul class="hero-bullets">
@@ -36,7 +39,8 @@
   <div class="hero-img">
       <img
         src="{% static 'media/portada.jpeg' %}"
-        alt="Infinito Capacitaciones"
+        alt="Alumna practicando un tratamiento de estética facial en un curso de Infinito Capacitaciones"
+        width="640" height="480" loading="eager"
       />
     </div> 
 </section>
@@ -64,7 +68,12 @@ document.addEventListener("DOMContentLoaded", function () {
     const video = document.getElementById("homeVideo");
     const close = document.querySelector(".close");
 
-    // siempre se abre
+    // Una vez por visitante: un pop-up que tapa el contenido en cada visita
+    // es penalizado por Google en las busquedas desde el celular.
+    let yaVisto = false;
+    try { yaVisto = localStorage.getItem("videoBienvenidaVisto") === "1"; } catch (e) {}
+    if (yaVisto) { modal.style.display = "none"; return; }
+    try { localStorage.setItem("videoBienvenidaVisto", "1"); } catch (e) {}
     modal.style.display = "flex";
 
     // carga el video al abrir
