@@ -31,6 +31,11 @@
               Tu respuesta: {{ item.chosen.text|default:"—" }}
               — <strong style="color:{% if item.is_correct %}#15803d{% else %}#b91c1c{% endif %}">{% if item.is_correct %}Correcta{% else %}Incorrecta{% endif %}</strong>
             </div>
+            {% if not item.is_correct and item.right %}
+              <div style="margin-top:4px;color:#15803d">
+                Respuesta correcta: <strong>{% for c in item.right %}{{ c.text }}{% if not forloop.last %} / {% endif %}{% endfor %}</strong>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>

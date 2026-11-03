@@ -627,7 +627,8 @@ def quiz_take(request, course_slug, stage_slug):
                 is_ok = bool(chosen and chosen.is_correct)
                 if is_ok:
                     correct += 1
-                review.append({"question": q, "chosen": chosen, "is_correct": is_ok})
+                right = [c for c in q.choices.all() if c.is_correct]
+                review.append({"question": q, "chosen": chosen, "is_correct": is_ok, "right": right})
             score = round((correct / max(total, 1)) * 100)
             passed = score >= quiz.passing_score
 
