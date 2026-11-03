@@ -617,12 +617,17 @@ def quiz_take(request, course_slug, stage_slug):
     if request.method == "POST":
         form = QuizForm(request.POST, quiz=quiz)
         if form.is_valid():
-            total = quiz.questions.count()
+            questions = list(quiz.questions.prefetch_related("choices"))
+            total = len(questions)
             correct = 0
-            for q in quiz.questions.all():
+            review = []
+            for q in questions:
                 choice_id = int(form.cleaned_data[f"q_{q.id}"])
-                if q.choices.filter(id=choice_id, is_correct=True).exists():
+                chosen = next((c for c in q.choices.all() if c.id == choice_id), None)
+                is_ok = bool(chosen and chosen.is_correct)
+                if is_ok:
                     correct += 1
+                review.append({"question": q, "chosen": chosen, "is_correct": is_ok})
             score = round((correct / max(total, 1)) * 100)
             passed = score >= quiz.passing_score
 
@@ -649,6 +654,9 @@ def quiz_take(request, course_slug, stage_slug):
                     "score": score,
                     "passed": passed,
                     "passing_score": quiz.passing_score,
+                    "review": review,
+                    "correct_count": correct,
+                    "total": total,
                     "retake_url": reverse(
                         "lms:quiz_take", args=[course_slug, stage_slug]
                     ),
