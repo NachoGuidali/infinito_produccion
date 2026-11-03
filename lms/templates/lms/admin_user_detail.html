@@ -1,11 +1,98 @@
 {% extends "lms/base.html" %}
-{% block title %}Usuario — {{ the_user.username }}{% endblock %}
+{% block title %}Alumno — {{ the_user.get_full_name|default:the_user.username }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
 {% block content %}
 
-<h1 style="margin:0 0 8px">Usuario: {{ the_user.username }}</h1>
-<p class="muted" style="margin-top:-4px">{{ the_user.get_full_name|default:'(sin nombre)' }} — {{ the_user.email }}</p>
+<style>
+  .ud-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 16px;margin:0}
+  .ud-grid dt{font-size:13px;color:var(--muted,#6b7280)}
+  .ud-grid dd{margin:0 0 4px;font-weight:600;word-break:break-word}
+  .badge{padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;display:inline-block;white-space:nowrap}
+  .b-ok{background:#e7f9ed;color:#187a3d}
+  .b-bad{background:#ffeff1;color:#b30b2a}
+  .b-todo{background:#f1f2f4;color:#4b5563}
+  .b-info{background:#eef6ff;color:#0b3b91}
+  .ud-table{width:100%;border-collapse:collapse}
+  .ud-table th,.ud-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  .ud-table th{font-size:13px;color:var(--muted,#6b7280);font-weight:600}
+  .ud-bar{height:8px;background:#f1f2f4;border-radius:999px;overflow:hidden;margin:6px 0 10px}
+  .ud-bar span{display:block;height:100%;background:#22a05a}
+</style>
 
-<h2 style="margin:12px 0 8px">Compras</h2>
+<p style="margin:0 0 8px"><a href="{% url 'lms:admin_panel' %}?tab=alumnos">← Volver a alumnos</a></p>
+
+<h1 style="margin:0 0 4px">{{ the_user.get_full_name|default:the_user.username }}</h1>
+<p class="muted" style="margin:0 0 12px">{{ the_user.email }}</p>
+
+<div class="card">
+  <dl class="ud-grid">
+    <div><dt>DNI</dt><dd>{{ profile.dni|default:"–" }}</dd></div>
+    <div><dt>Teléfono</dt><dd>{{ profile.telefono|default:"–" }}</dd></div>
+    <div><dt>Registrado</dt><dd>{{ the_user.date_joined|date:"d/m/Y" }}</dd></div>
+    <div><dt>Último ingreso</dt><dd>{{ the_user.last_login|date:"d/m/Y H:i"|default:"–" }}</dd></div>
+  </dl>
+</div>
+
+<h2 style="margin:18px 0 8px">Avance por curso</h2>
+{% for cp in courses_progress %}
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline">
+      <strong>{{ cp.course.title }}</strong>
+      <span class="muted">{{ cp.passed }} de {{ cp.total }} etapas aprobadas</span>
+    </div>
+    <div class="ud-bar"><span style="width:{% widthratio cp.passed cp.total 100 %}%"></span></div>
+    <div style="overflow-x:auto">
+    <table class="ud-table">
+      <thead><tr><th>Etapa</th><th>Estado</th><th>Mejor nota</th><th>Intentos</th><th>Acceso</th></tr></thead>
+      <tbody>
+        {% for s in cp.stages %}
+        <tr>
+          <td>{{ forloop.counter }}. {{ s.stage.title }}</td>
+          <td>
+            {% if s.status == "passed" %}<span class="badge b-ok">Aprobada</span>
+            {% elif s.status == "failed" %}<span class="badge b-bad">Sin aprobar</span>
+            {% else %}<span class="badge b-todo">Sin rendir</span>{% endif %}
+          </td>
+          <td>{% if s.score is not None and s.attempts %}{{ s.score }}%{% else %}–{% endif %}</td>
+          <td>{{ s.attempts|default:"–" }}</td>
+          <td>{% if s.has_access %}Sí{% else %}<span class="muted">No</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+{% empty %}
+  <div class="card muted">Todavía no tiene acceso a ningún curso ni avances registrados.</div>
+{% endfor %}
+
+<h2 style="margin:18px 0 8px">Pruebas rendidas</h2>
+<div class="card">
+  <div style="overflow-x:auto">
+  <table class="ud-table">
+    <thead><tr><th>Fecha</th><th>Curso</th><th>Etapa</th><th>Nota</th><th>Resultado</th><th></th></tr></thead>
+    <tbody>
+      {% for a in attempts %}
+      <tr>
+        <td style="white-space:nowrap">{{ a.created_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ a.quiz.stage.course.title }}</td>
+        <td>{{ a.quiz.stage.title }}</td>
+        <td>{{ a.score }}%</td>
+        <td>{% if a.passed %}<span class="badge b-ok">Aprobó</span>{% else %}<span class="badge b-bad">No aprobó</span>{% endif %}</td>
+        <td style="white-space:nowrap">
+          {% if a.answers_count %}<a href="{% url 'lms:admin_attempt_detail' a.id %}">Ver respuestas</a>
+          {% else %}<span class="muted" title="Las respuestas se guardan desde noviembre 2026">Sin detalle</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="muted">No rindió ninguna prueba.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<h2 style="margin:18px 0 8px">Compras</h2>
 <div class="card">
   <ul style="margin:0;padding-left:18px">
     {% for p in purchases %}
@@ -28,20 +115,5 @@
   </ul>
 </div>
 
-<h2 style="margin:12px 0 8px">Avances por etapa</h2>
-<div class="card">
-  <ul style="margin:0;padding-left:18px">
-    {% for s in progresses %}
-      <li>
-        {{ s.stage.course.title }} — {{ s.stage.title }}:
-        {% if s.passed %}Aprobada{% else %}En progreso{% endif %}
-        {% if s.score %}(score: {{ s.score }}){% endif %}
-      </li>
-    {% empty %}
-      <li class="muted">Sin avances registrados.</li>
-    {% endfor %}
-  </ul>
-</div>
-
-<p style="margin-top:14px"><a class="btn-outline" href="{% url 'lms:admin_panel' %}">← Volver al panel</a></p>
+<p style="margin-top:14px"><a class="btn-outline" href="{% url 'lms:admin_panel' %}?tab=alumnos">← Volver a alumnos</a></p>
 {% endblock %}

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Course, Stage, Lesson, Quiz, Question, Choice,
-    Enrollment, StageProgress, QuizAttempt,
+    Enrollment, StageProgress, QuizAttempt, QuizAttemptAnswer,
     Bundle, Purchase, PurchaseItem, Entitlement
 )
 
@@ -64,8 +64,16 @@ class StageProgressAdmin(admin.ModelAdmin):
     list_display = ("user", "stage", "passed", "score", "passed_at")
     list_filter = ("passed", "stage")
 
+class QuizAttemptAnswerInline(admin.TabularInline):
+    model = QuizAttemptAnswer
+    extra = 0
+    fields = ("order", "question_text", "choice_text", "is_correct", "correct_text")
+    readonly_fields = fields
+    can_delete = False
+
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
+    inlines = [QuizAttemptAnswerInline]
     list_display = ("user", "quiz", "score", "passed", "created_at")
     list_filter = ("passed",)
 

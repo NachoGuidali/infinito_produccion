@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.db import transaction
 from django.db.models import Q, Count, Max
 from django.core.files.storage import default_storage
+from django.core.paginator import Paginator
 from django.utils.text import slugify
 from django.core.mail import send_mail
 from django.core import signing
@@ -33,6 +34,7 @@ from .models import (
     Question,
     Choice,
     QuizAttempt,
+    QuizAttemptAnswer,
     StageProgress,
     Bundle,
     Entitlement,
@@ -632,9 +634,22 @@ def quiz_take(request, course_slug, stage_slug):
             score = round((correct / max(total, 1)) * 100)
             passed = score >= quiz.passing_score
 
-            QuizAttempt.objects.create(
+            attempt = QuizAttempt.objects.create(
                 user=request.user, quiz=quiz, score=score, passed=passed
             )
+            QuizAttemptAnswer.objects.bulk_create([
+                QuizAttemptAnswer(
+                    attempt=attempt,
+                    question=item["question"],
+                    choice=item["chosen"],
+                    order=i,
+                    question_text=item["question"].text,
+                    choice_text=item["chosen"].text if item["chosen"] else "",
+                    correct_text=" / ".join(c.text for c in item["right"]),
+                    is_correct=item["is_correct"],
+                )
+                for i, item in enumerate(review, start=1)
+            ])
 
             sp, _ = StageProgress.objects.get_or_create(
                 user=request.user, stage=stage
@@ -1102,6 +1117,80 @@ def _is_staff(u):
     return u.is_authenticated and u.is_staff
 
 
+def _courses_progress_for_users(user_ids):
+    """
+    {user_id: [{"course", "passed", "total"}, ...]} con los cursos en los que
+    cada usuario tiene acceso a alguna etapa o algun avance registrado.
+    """
+    stage_totals = dict(
+        Stage.objects.order_by().values_list("course_id").annotate(n=Count("id"))
+    )
+    courses_by_user = {uid: set() for uid in user_ids}
+    for uid, cid in Entitlement.objects.filter(user_id__in=user_ids).values_list(
+        "user_id", "stage__course_id"
+    ):
+        courses_by_user[uid].add(cid)
+    passed = {}
+    for uid, cid, done in StageProgress.objects.filter(user_id__in=user_ids).values_list(
+        "user_id", "stage__course_id", "passed"
+    ):
+        courses_by_user[uid].add(cid)
+        if done:
+            passed[(uid, cid)] = passed.get((uid, cid), 0) + 1
+    all_cids = set().union(*courses_by_user.values()) if courses_by_user else set()
+    courses = {c.id: c for c in Course.objects.filter(id__in=all_cids)}
+    result = {}
+    for uid, cids in courses_by_user.items():
+        rows = [
+            {
+                "course": courses[cid],
+                "passed": passed.get((uid, cid), 0),
+                "total": stage_totals.get(cid, 0),
+            }
+            for cid in cids
+            if cid in courses
+        ]
+        rows.sort(key=lambda r: r["course"].title)
+        result[uid] = rows
+    return result
+
+
+def _admin_students_page(request):
+    """
+    Pestania "Alumnos" del panel. Sin busqueda lista a quienes tienen acceso a
+    alguna etapa o rindieron algo; con busqueda, a cualquier usuario.
+    """
+    UserModel = get_user_model()
+    aq = request.GET.get("aq", "").strip()
+    qs = UserModel.objects.all()
+    if aq:
+        qs = qs.filter(
+            Q(username__icontains=aq)
+            | Q(email__icontains=aq)
+            | Q(first_name__icontains=aq)
+            | Q(last_name__icontains=aq)
+            | Q(profile__dni__icontains=aq)
+        )
+    else:
+        qs = qs.filter(
+            Q(entitlements__isnull=False) | Q(quiz_attempts__isnull=False)
+        )
+    qs = (
+        qs.select_related("profile")
+        .annotate(
+            attempts_count=Count("quiz_attempts", distinct=True),
+            last_attempt=Max("quiz_attempts__created_at"),
+        )
+        .order_by("-last_attempt", "-date_joined")
+        .distinct()
+    )
+    page = Paginator(qs, 30).get_page(request.GET.get("page"))
+    progress = _courses_progress_for_users([u.id for u in page.object_list])
+    for u in page.object_list:
+        u.course_rows = progress.get(u.id, [])
+    return page
+
+
 @user_passes_test(_is_staff)
 def admin_panel(request):
     UserModel = get_user_model()
@@ -1183,6 +1272,14 @@ def admin_panel(request):
     )
 
     total_users = StageProgress.objects.values("user").distinct().count()
+
+    progresses = (
+        StageProgress.objects.select_related("user", "stage", "stage__course")
+        .order_by("-updated_at")[:100]
+    )
+
+    students_page = _admin_students_page(request)
+
     total_courses = Course.objects.count()
     total_stages = Stage.objects.count()
     total_lessons = Lesson.objects.count()
@@ -1199,7 +1296,10 @@ def admin_panel(request):
             "search_q": q,
             "purchases": purchases,
             "completed": completed,
-            "stage_progress": [],
+            "progresses": progresses,
+            "students_page": students_page,
+            "students_q": request.GET.get("aq", "").strip(),
+            "active_tab": request.GET.get("tab", ""),
             "summary": {
                 "users": total_users,
                 "courses": total_courses,
@@ -1265,6 +1365,7 @@ def admin_order_delete(request, purchase_id: int):
 def admin_user_detail(request, user_id: int):
     UserModel = get_user_model()
     the_user = get_object_or_404(UserModel, pk=user_id)
+    profile = Profile.objects.filter(user=the_user).first()
 
     purchases = (
         Purchase.objects.filter(user=the_user)
@@ -1272,10 +1373,55 @@ def admin_user_detail(request, user_id: int):
         .order_by("-created_at")
     )
 
-    progresses = (
-        StageProgress.objects.filter(user=the_user)
-        .select_related("stage", "stage__course")
-        .order_by("-updated_at", "-passed_at")
+    # Avance por curso: todas las etapas del curso, con su estado para este alumno
+    progress_by_stage = {
+        sp.stage_id: sp for sp in StageProgress.objects.filter(user=the_user)
+    }
+    entitled = set(
+        Entitlement.objects.filter(user=the_user).values_list("stage_id", flat=True)
+    )
+    attempts_by_stage = dict(
+        QuizAttempt.objects.filter(user=the_user)
+        .order_by()
+        .values_list("quiz__stage_id")
+        .annotate(n=Count("id"))
+    )
+    course_ids = set(
+        Stage.objects.filter(
+            id__in=set(progress_by_stage) | entitled | set(attempts_by_stage)
+        ).values_list("course_id", flat=True)
+    )
+    courses_progress = []
+    for course in Course.objects.filter(id__in=course_ids).prefetch_related("stages").order_by("title"):
+        stages = []
+        for st in sorted(course.stages.all(), key=lambda x: (x.order, x.id)):
+            sp = progress_by_stage.get(st.id)
+            n = attempts_by_stage.get(st.id, 0)
+            if sp and sp.passed:
+                status = "passed"
+            elif n:
+                status = "failed"
+            else:
+                status = "todo"
+            stages.append({
+                "stage": st,
+                "status": status,
+                "score": sp.score if sp else None,
+                "attempts": n,
+                "has_access": st.id in entitled,
+            })
+        courses_progress.append({
+            "course": course,
+            "stages": stages,
+            "passed": sum(1 for x in stages if x["status"] == "passed"),
+            "total": len(stages),
+        })
+
+    attempts = (
+        QuizAttempt.objects.filter(user=the_user)
+        .select_related("quiz__stage__course")
+        .annotate(answers_count=Count("answers"))
+        .order_by("-created_at")
     )
 
     return render(
@@ -1283,8 +1429,28 @@ def admin_user_detail(request, user_id: int):
         "lms/admin_user_detail.html",
         {
             "the_user": the_user,
+            "profile": profile,
             "purchases": purchases,
-            "progresses": progresses,
+            "courses_progress": courses_progress,
+            "attempts": attempts,
+        },
+    )
+
+
+@user_passes_test(_is_staff)
+def admin_attempt_detail(request, attempt_id: int):
+    attempt = get_object_or_404(
+        QuizAttempt.objects.select_related("user", "quiz__stage__course"),
+        pk=attempt_id,
+    )
+    answers = list(attempt.answers.all())
+    return render(
+        request,
+        "lms/admin_attempt_detail.html",
+        {
+            "attempt": attempt,
+            "answers": answers,
+            "correct_count": sum(1 for a in answers if a.is_correct),
         },
     )
 

@@ -225,6 +225,26 @@ class QuizAttempt(TimeStamped):
         ordering = ['-created_at']
 
 
+class QuizAttemptAnswer(models.Model):
+    """
+    Lo que respondio el alumno en cada pregunta de un intento.
+    Guarda una copia de los textos porque el wizard de cursos puede editar o
+    borrar preguntas/opciones, y el historial tiene que seguir mostrando lo
+    que el alumno vio en ese momento.
+    """
+    attempt = models.ForeignKey(QuizAttempt, related_name='answers', on_delete=models.CASCADE)
+    question = models.ForeignKey(Question, null=True, blank=True, on_delete=models.SET_NULL)
+    choice = models.ForeignKey(Choice, null=True, blank=True, on_delete=models.SET_NULL)
+    order = models.PositiveIntegerField(default=0)
+    question_text = models.TextField()
+    choice_text = models.CharField(max_length=300, blank=True, default='')
+    correct_text = models.TextField(blank=True, default='')
+    is_correct = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['attempt', 'order']
+
+
 # =========================
 # Ventas
 # =========================

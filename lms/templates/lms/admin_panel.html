@@ -59,7 +59,7 @@
 
 <div class="tabs">
   <a class="tab active" href="#pedidos" onclick="sel(event,'pedidos')">Pedidos</a>
-  <a class="tab" href="#usuarios" onclick="sel(event,'usuarios')">Por usuario</a>
+  <a class="tab" href="#alumnos" onclick="sel(event,'alumnos')">Alumnos</a>
   <a class="tab" href="#avances" onclick="sel(event,'avances')">Avances por etapa</a>
 </div>
 
@@ -153,20 +153,56 @@
   </table>
 </div>
 
-<div id="usuarios" class="section" style="display:none">
-  <h2 style="margin:6px 0 10px">Usuarios con compras</h2>
-  <div class="card-row">
-    <div class="col card">
-      <ul style="margin:0;padding-left:18px">
-        {% for p in purchases %}
-          <li>
-            <a href="{% url 'lms:admin_user_detail' p.user.id %}">{{ p.user.username }}</a>
-            — última compra: {{ p.created_at|date:"d/m/Y H:i" }}
-          </li>
-        {% endfor %}
-      </ul>
-    </div>
+<div id="alumnos" class="section" style="display:none">
+  <h2 style="margin:6px 0 10px">Alumnos</h2>
+  <form method="get" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <input type="hidden" name="tab" value="alumnos">
+    <input type="search" name="aq" value="{{ students_q }}" placeholder="Buscar por nombre, email o DNI"
+           style="flex:1;min-width:220px;padding:8px 12px;border:1px solid var(--line);border-radius:10px">
+    <button class="btn-xs" type="submit">Buscar</button>
+    {% if students_q %}<a class="btn-xs" href="?tab=alumnos">Limpiar</a>{% endif %}
+  </form>
+  <p class="muted" style="margin:0 0 4px">
+    {% if students_q %}Resultados para "{{ students_q }}" (todos los usuarios){% else %}Usuarios con acceso a algún curso o con pruebas rendidas{% endif %}
+    — {{ students_page.paginator.count }} en total
+  </p>
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr><th>Alumno</th><th>DNI</th><th>Avance por curso</th><th>Pruebas rendidas</th><th>Última prueba</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in students_page %}
+      <tr>
+        <td>
+          <strong>{{ u.get_full_name|default:u.username }}</strong>
+          <div class="muted" style="font-size:13px">{{ u.email }}</div>
+        </td>
+        <td>{{ u.profile.dni|default:"–" }}</td>
+        <td>
+          {% for r in u.course_rows %}
+            <div style="font-size:14px">{{ r.course.title }}:
+              <span class="badge {% if r.total and r.passed == r.total %}b-paid{% else %}b-info{% endif %}">{{ r.passed }}/{{ r.total }} etapas</span>
+            </div>
+          {% empty %}<span class="muted">–</span>{% endfor %}
+        </td>
+        <td>{{ u.attempts_count }}</td>
+        <td>{{ u.last_attempt|date:"d/m/Y H:i"|default:"–" }}</td>
+        <td><a class="btn-xs" href="{% url 'lms:admin_user_detail' u.id %}">Ver detalle</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="muted">No se encontraron alumnos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
   </div>
+  {% if students_page.paginator.num_pages > 1 %}
+  <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px">
+    {% if students_page.has_previous %}<a class="btn-xs" href="?tab=alumnos&aq={{ students_q|urlencode }}&page={{ students_page.previous_page_number }}">← Anterior</a>{% endif %}
+    <span class="muted">Página {{ students_page.number }} de {{ students_page.paginator.num_pages }}</span>
+    {% if students_page.has_next %}<a class="btn-xs" href="?tab=alumnos&aq={{ students_q|urlencode }}&page={{ students_page.next_page_number }}">Siguiente →</a>{% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <div id="avances" class="section" style="display:none">
@@ -218,13 +254,22 @@
 </div>
 
 <script>
+function showTab(id){
+  const sec = document.getElementById(id);
+  if(!sec) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.getAttribute('href')==='#'+id));
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  sec.style.display='block';
+}
 function sel(e,id){
   e.preventDefault();
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  e.target.classList.add('active');
-  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-  document.getElementById(id).style.display='block';
+  showTab(id);
+  history.replaceState(null,'','#'+id);
 }
+(function(){
+  const t = new URLSearchParams(location.search).get('tab') || location.hash.slice(1);
+  if(t) showTab(t);
+})();
 </script>
 
 <script>

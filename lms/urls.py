@@ -80,6 +80,11 @@ urlpatterns = [
         views.admin_user_detail,
         name="admin_user_detail",
     ),
+    path(
+        "panel-admin/intento/<int:attempt_id>/",
+        views.admin_attempt_detail,
+        name="admin_attempt_detail",
+    ),
 
     # Alias corto /panel/... para no romper nada si en algún lado pusiste esa ruta
     path("panel/", RedirectView.as_view(pattern_name="lms:admin_panel", permanent=False)),
